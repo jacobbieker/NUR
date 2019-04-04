@@ -27,7 +27,7 @@ print(poisson(3, 21))
 print(poisson(2.6, 40))
 # print(poisson(101,200))
 
-seed = 1337
+seed = 5227
 
 """
 
@@ -279,9 +279,16 @@ measured_values = [sat_equation(r, A) for r in interp_data_points]
 
 # Now onto Part c, numerical differentiation
 
-def derivative(func, b, step_size=0.001):
+def n(x):
+    return three_d_integral(x, A, 1)
+
+def derivative(func, b, step_size=0.000001):
     """
     This uses the central differences method to calculate the derivative of a function
+
+    The step size was chosen to minimize the error between the numerical and analytical results, smaller step size resulted
+    in a larger error, as well as a larger step size
+
     :param b:
     :return:
     """
@@ -299,9 +306,12 @@ def analytic_derivative(b):
     :return:
     """
     x = b
-    return (4 * np.pi * A * b ^ 3 * (x / b) ^ a * np.exp(-(x / b) ^ c) * (a - c * (x / b) ^ c - 1) / (x ^ 2))
+    return (4 * np.pi * A * b ** 3 * (x / b) ** a * np.exp(-(x / b) ** c) * (a - c * (x / b) ** c - 1) / (x ** 2))
 
 
+print("Analytic: {}\n Numerical: {}\n Difference: {}\n".format(np.round(analytic_derivative(b), 12),
+                                                               np.round(derivative(n, b), 12),
+                                                               np.round(analytic_derivative(b), 12) - np.round(derivative(n, b), 12)))
 # TODO Compare the Two for X = b
 
 # Part D Sampling
@@ -335,6 +345,8 @@ print("Max: ", np.max(rand_sample_x))
 plt.scatter(rand_sample_x, rand_sample_y, s=1)
 plt.plot(np.arange(0, 5, 0.001), [three_d_integral(i, A, 1) for i in np.arange(0, 5, 0.001)], 'r')
 plt.title("Random Sampling")
+#plt.xscale('log')
+#plt.yscale('log')
 plt.show()
 
 
@@ -371,7 +383,7 @@ plt.show()
 
 # Need to Generate 1000 Halos Now
 
-# TODO Generate 100 halos
+# TODO Generate 1000 halos
 
 """
 
@@ -380,20 +392,62 @@ Part f Root Finding
 """
 
 
-def root_finder():
+def root_finder(bracket=[1e-8,5], epsilon=0.001, max_iter=500):
     """
     Find the roots, easiest method to do is the bisection method, so deciding on that one
+
+    First bracket the root, and see where the function changes sign -> that is the root
+
+    Gaurunteed to work (according to the slides), unlike secant method or some of the other ones
+
+    :return:
+    """
+
+    for i in range(max_iter):
+        mid_point = (bracket[0]+bracket[1])/2.
+        # Now check to see which half the root is in
+        if n(bracket[1])*n(mid_point) > 0:
+            # root in the other half
+            bracket[1] = mid_point
+        else:
+            bracket[0] = mid_point
+
+        # Now check if it has converged, that is if the space between the brackets is within epsilon
+        if bracket[1]-bracket[0] < epsilon:
+            return mid_point
+    # If it gets to here, then no root found after the max iterations
+    print("Root not found in {} iterations".format(max_iter))
+    return (bracket[0] + bracket[1])/2.
+
+
+root = root_finder()
+print("Root = {}".format(root))
+
+
+"""
+
+Part g) Sorting, histogram, and Poisson checking
+
+"""
+def cubic_spline():
+    """
+    This method was chosen because in the slides it acheived fairly good fits hile being simpler than the Akima spline
+
+    Natural because at i= and i = N-1, setting y'' = 0
+
+    This is then the equation" y = Ayi + Byi+1 + Cy''i + Dy''i+1
+
+    A = (xi+1 - x) / (xi + 1 - xi)
+    B = 1 - A
+    C = 1/6*(A^3-A)(xi+1-xi)^2
+    D = 1/6*(B^3 - B)(xi+1-xi)^2
 
     :return:
     """
 
 
 
-    raise NotImplementedError
 
-
-
-def cubic_spline():
     raise NotImplementedError
 
 
