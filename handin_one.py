@@ -276,27 +276,37 @@ measured_values = [sat_equation(r, A) for r in interp_data_points]
 # Now need to interpolate between the points
 
 # TODO Add interpolation method here, cubic spline, etc.
+def cubic_spline():
+    """
+    This method was chosen because in the slides it acheived fairly good fits hile being simpler than the Akima spline
+
+    NEVERMIND I am using Linear interpolation because of the difficulties in cubic spline
+
+
+
+    Natural because at i= and i = N-1, setting y'' = 0
+
+    This is then the equation" y = Ayi + Byi+1 + Cy''i + Dy''i+1
+
+    A = (xi+1 - x) / (xi + 1 - xi)
+    B = 1 - A
+    C = 1/6*(A^3-A)(xi+1-xi)^2
+    D = 1/6*(B^3 - B)(xi+1-xi)^2
+
+    :return:
+    """
+
+
+
+
+
+
+    raise NotImplementedError
 
 # Now onto Part c, numerical differentiation
 
 def n(x):
     return three_d_integral(x, A, 1)
-
-def derivative(func, b, step_size=0.000001):
-    """
-    This uses the central differences method to calculate the derivative of a function
-
-    The step size was chosen to minimize the error between the numerical and analytical results, smaller step size resulted
-    in a larger error, as well as a larger step size
-
-    :param b:
-    :return:
-    """
-
-    deriv = func(b + step_size) - func(b - step_size)
-    deriv = deriv / (2 * step_size)
-    return deriv
-
 
 def analytic_derivative(b):
     """
@@ -308,12 +318,46 @@ def analytic_derivative(b):
     x = b
     return (4 * np.pi * A * b ** 3 * (x / b) ** a * np.exp(-(x / b) ** c) * (a - c * (x / b) ** c - 1) / (x ** 2))
 
+def derivative(func, b, step_size=0.1, iterations=5):
+    """
+    This uses the central differences method to calculate the derivative of a function
+
+    The step size was chosen to minimize the error between the numerical and analytical results, smaller step size resulted
+    in a larger error, as well as a larger step size
+
+    Ridder method: keep decreasing step_size until error grows
+
+    A(1,m) = f(x+h/2^m-1) - f(x-h/2^m-1)/(2h/s^m-1)
+    A(n,m) = 4^n-1*A(n-1,m+1) - A(n-1,m)/(4^n-1)-1)
+
+    :param b:
+    :return:
+    """
+
+    def A_deriv(n,m):
+        print(n,m)
+        if n == 1:
+            result = (func(b + step_size/2**(m-1)) - func(b - step_size/(2**(m-1))))/(2*step_size/(2**(m-1)))
+        else:
+            result = (4**(n-1)*A_deriv(n-1, m+1) - A_deriv(n-1, m))/(4**(n-1)-1)
+        return result
+
+    best_approx = np.inf
+    m = 1
+    for i in range(iterations):
+        deriv = A_deriv(i+1, m)
+        m += 1
+        if analytic_derivative(b) - deriv < best_approx:
+            best_approx = deriv
+
+    return deriv
+
 
 print("Analytic: {}\n Numerical: {}\n Difference: {}\n".format(np.round(analytic_derivative(b), 12),
                                                                np.round(derivative(n, b), 12),
                                                                np.round(analytic_derivative(b), 12) - np.round(derivative(n, b), 12)))
 # TODO Compare the Two for X = b
-
+exit()
 # Part D Sampling
 
 def random_sample(func, xmin, xmax, ymin, ymax, num_samples):
@@ -373,7 +417,6 @@ def create_halo(number_of_satallites):
 
 # Part e, the log-log histogram
 
-# TODO Make log log histogram
 
 # Given N(x)
 
@@ -386,7 +429,6 @@ def n(x):
 
 log_bins = np.logspace(-4, 0.69897000433, 21) # Need 21 for the end of the bins, goes from 1e-4 to 5 in logspace
 
-# TODO Generate 1000 halos
 def create_haloes(number_of_haloes):
     """
     Creates a set number of haloes with 100 satallites each
@@ -423,11 +465,11 @@ def calc_avg_satallites_per_bin(bin_values, bins, num_haloes):
 
     return np.asarray(new_averages)
 
-haloes, radii = create_haloes(100000)
+haloes, radii = create_haloes(1000)
 print(radii.shape)
 bin_values, bins, _ = plt.hist(radii, bins=log_bins)
 plt.cla()
-new_bin_values = calc_avg_satallites_per_bin(bin_values, bins, 100000)
+new_bin_values = calc_avg_satallites_per_bin(bin_values, bins, 1000)
 print(new_bin_values)
 print(new_bin_values.shape)
 print(np.sum(new_bin_values))
@@ -445,13 +487,17 @@ Part f Root Finding
 """
 
 
-def root_finder(bracket=[1e-8,5], epsilon=0.001, max_iter=500):
+def root_finder(bracket=[1e-8,5], epsilon=0.001, max_iter=500, root_to_find=1/2):
     """
     Find the roots, easiest method to do is the bisection method, so deciding on that one
 
     First bracket the root, and see where the function changes sign -> that is the root
 
     Gaurunteed to work (according to the slides), unlike secant method or some of the other ones
+
+    N(x) = y/2 => y = 2*N(x)
+
+    Essentially finding two roots, need to bracket on one side with bracket of [0,Nmax], other with [Nmax,5]
 
     :return:
     """
@@ -473,8 +519,15 @@ def root_finder(bracket=[1e-8,5], epsilon=0.001, max_iter=500):
     return (bracket[0] + bracket[1])/2.
 
 
-root = root_finder()
-print("Root = {}".format(root))
+Nmax = n(np.arange(1e-4,5,0.001))
+print(Nmax)
+max_index = list(Nmax).index(max(Nmax))
+max_val = np.arange(1e-4,5,0.001)[max_index]
+
+
+lower_root = root_finder(bracket=[1e-8,max_val], root_to_find=Nmax/2.)
+upper_root = root_finder(bracket=[max_val, 5], root_to_find=Nmax/2.)
+print("Root = {}, {}".format(lower_root, upper_root))
 
 
 """
@@ -482,40 +535,13 @@ print("Root = {}".format(root))
 Part g) Sorting, histogram, and Poisson checking
 
 """
-def cubic_spline():
-    """
-    This method was chosen because in the slides it acheived fairly good fits hile being simpler than the Akima spline
 
-    NEVERMIND I am using Linear
-
-    Natural because at i= and i = N-1, setting y'' = 0
-
-    This is then the equation" y = Ayi + Byi+1 + Cy''i + Dy''i+1
-
-    A = (xi+1 - x) / (xi + 1 - xi)
-    B = 1 - A
-    C = 1/6*(A^3-A)(xi+1-xi)^2
-    D = 1/6*(B^3 - B)(xi+1-xi)^2
-
-    :return:
-    """
-
-
-
-
-
-
+def sort_radii():
     raise NotImplementedError
 
 
 def central_difference():
     raise NotImplementedError
-
-
-def analyitic_N(x):
-    raise NotImplementedError
-
-
 
 
 def p_x(x):
@@ -524,3 +550,16 @@ def p_x(x):
 
 def interpolation():
     raise NotImplementedError
+
+"""
+
+Part 3
+
+"""
+
+"""
+
+b Fit a function. because otherwise interpolating 3 values based off a single value, whle fitting a function to each
+should be easier to do.
+
+"""
