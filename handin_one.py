@@ -366,6 +366,11 @@ def create_halo(number_of_satallites):
     return rand_sample_x, phi_sample, theta_sample
 
 
+# Now outputting them
+#for r, p, t in create_halo(100):
+#    print("R: {} $\phi$: {} $\\theta$: {}".format(r, p, t))
+
+
 # Part e, the log-log histogram
 
 # TODO Make log log histogram
@@ -375,15 +380,63 @@ def create_halo(number_of_satallites):
 def n(x):
     return three_d_integral(x, A, 100)
 
+
+
+# Need to Generate 1000 Halos Now
+
+log_bins = np.logspace(-4, 0.69897000433, 21) # Need 21 for the end of the bins, goes from 1e-4 to 5 in logspace
+
+# TODO Generate 1000 halos
+def create_haloes(number_of_haloes):
+    """
+    Creates a set number of haloes with 100 satallites each
+    :param number_of_haloes:
+    :return:
+    """
+
+    haloes = []
+    radii = []
+    for i in range(number_of_haloes):
+        r, p, t = create_halo(100)
+        haloes.append((r, p, t))
+        radii.append(r)
+
+    radii = np.asarray(radii)
+    radii = np.concatenate(radii)
+    return haloes, radii
+
+def calc_avg_satallites_per_bin(bin_values, bins, num_haloes):
+    """
+    Divide bin values by width of bins, then by number of haloes used to create it
+    Gives average number of satallies per bin
+    :param bin_values:
+    :param bins:
+    :return:
+    """
+
+    new_averages = []
+
+    for index, element in enumerate(bin_values):
+        avg_per_halo = element / num_haloes # Divide by number of haloes to get average per halo
+        avg_per_bin_width = avg_per_halo / (bins[index+1] - bins[index]) # Divide by bin width to normalize for bin width
+        new_averages.append(avg_per_bin_width)
+
+    return np.asarray(new_averages)
+
+haloes, radii = create_haloes(100000)
+print(radii.shape)
+bin_values, bins, _ = plt.hist(radii, bins=log_bins)
+plt.cla()
+new_bin_values = calc_avg_satallites_per_bin(bin_values, bins, 100000)
+print(new_bin_values)
+print(new_bin_values.shape)
+print(np.sum(new_bin_values))
 plt.title("Log-Log of N(x)")
 plt.xscale("log")
 plt.yscale("log")
 plt.plot(np.arange(1e-4,5,0.001), n(np.arange(1e-4,5,0.001)), 'r')
+plt.hist(np.logspace(-4, 0.69897000433, 20), weights=new_bin_values, bins=log_bins)
 plt.show()
-
-# Need to Generate 1000 Halos Now
-
-# TODO Generate 1000 halos
 
 """
 
@@ -433,6 +486,8 @@ def cubic_spline():
     """
     This method was chosen because in the slides it acheived fairly good fits hile being simpler than the Akima spline
 
+    NEVERMIND I am using Linear
+
     Natural because at i= and i = N-1, setting y'' = 0
 
     This is then the equation" y = Ayi + Byi+1 + Cy''i + Dy''i+1
@@ -444,6 +499,8 @@ def cubic_spline():
 
     :return:
     """
+
+
 
 
 
