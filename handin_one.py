@@ -335,7 +335,6 @@ def derivative(func, b, step_size=0.1, iterations=5):
     """
 
     def A_deriv(n,m):
-        print(n,m)
         if n == 1:
             result = (func(b + step_size/2**(m-1)) - func(b - step_size/(2**(m-1))))/(2*step_size/(2**(m-1)))
         else:
@@ -356,8 +355,6 @@ def derivative(func, b, step_size=0.1, iterations=5):
 print("Analytic: {}\n Numerical: {}\n Difference: {}\n".format(np.round(analytic_derivative(b), 12),
                                                                np.round(derivative(n, b), 12),
                                                                np.round(analytic_derivative(b), 12) - np.round(derivative(n, b), 12)))
-# TODO Compare the Two for X = b
-exit()
 # Part D Sampling
 
 def random_sample(func, xmin, xmax, ymin, ymax, num_samples):
@@ -440,7 +437,7 @@ def create_haloes(number_of_haloes):
     radii = []
     for i in range(number_of_haloes):
         r, p, t = create_halo(100)
-        haloes.append((r, p, t))
+        haloes.append([r, p, t])
         radii.append(r)
 
     radii = np.asarray(radii)
@@ -466,13 +463,9 @@ def calc_avg_satallites_per_bin(bin_values, bins, num_haloes):
     return np.asarray(new_averages)
 
 haloes, radii = create_haloes(1000)
-print(radii.shape)
 bin_values, bins, _ = plt.hist(radii, bins=log_bins)
 plt.cla()
 new_bin_values = calc_avg_satallites_per_bin(bin_values, bins, 1000)
-print(new_bin_values)
-print(new_bin_values.shape)
-print(np.sum(new_bin_values))
 plt.title("Log-Log of N(x)")
 plt.xscale("log")
 plt.yscale("log")
@@ -486,6 +479,8 @@ Part f Root Finding
 
 """
 
+def n(x):
+    return three_d_integral(x, A, 100)
 
 def root_finder(bracket=[1e-8,5], epsilon=0.001, max_iter=500, root_to_find=1/2):
     """
@@ -499,42 +494,144 @@ def root_finder(bracket=[1e-8,5], epsilon=0.001, max_iter=500, root_to_find=1/2)
 
     Essentially finding two roots, need to bracket on one side with bracket of [0,Nmax], other with [Nmax,5]
 
+    Uses root_to_find by subtracting that value from the rest of the stuff, so that the root wanted is at 0
+
     :return:
     """
 
     for i in range(max_iter):
         mid_point = (bracket[0]+bracket[1])/2.
         # Now check to see which half the root is in
-        if n(bracket[1])*n(mid_point) > 0:
-            # root in the other half
+        # Is the midpoint the root?
+        mid_value = n(mid_point) - root_to_find
+        f_a = n(bracket[0]) - root_to_find
+        if f_a * mid_value < 0: # They have opposite signs
             bracket[1] = mid_point
-        else:
-            bracket[0] = mid_point
-
-        # Now check if it has converged, that is if the space between the brackets is within epsilon
-        if bracket[1]-bracket[0] < epsilon:
+        elif -1.*epsilon < mid_value < epsilon: # This is the root within epsilon
             return mid_point
+        else:
+            # Other two have opposite signs
+            bracket[0] = mid_point
+        # Now check if it has converged, that is if the space between the brackets is within epsilon
     # If it gets to here, then no root found after the max iterations
     print("Root not found in {} iterations".format(max_iter))
     return (bracket[0] + bracket[1])/2.
 
 
 Nmax = n(np.arange(1e-4,5,0.001))
-print(Nmax)
 max_index = list(Nmax).index(max(Nmax))
 max_val = np.arange(1e-4,5,0.001)[max_index]
 
-
-lower_root = root_finder(bracket=[1e-8,max_val], root_to_find=Nmax/2.)
-upper_root = root_finder(bracket=[max_val, 5], root_to_find=Nmax/2.)
+# There are two roots in this problem, as half the max happens on either side of the max
+lower_root = root_finder(bracket=[1e-8,max_val], root_to_find=n(max_val)/2.)
+upper_root = root_finder(bracket=[max_val, 5], root_to_find=n(max_val)/2.)
 print("Root = {}, {}".format(lower_root, upper_root))
-
+print("N(x) Value at Roots: {} {} \n Max Value: {}".format(n(lower_root), n(upper_root), n(max_val)))
 
 """
 
 Part g) Sorting, histogram, and Poisson checking
 
 """
+
+# Get the radial bin with the largest number of galaxies
+index_of_radial_bin_max = list(bin_values).index(max(bin_values))
+inner_radius = log_bins[index_of_radial_bin_max]
+outer_radius = log_bins[index_of_radial_bin_max+1]
+# Now sort the 1000 haloes on their ownm using Mergesort
+def merge_sort(arr):
+    """
+
+    Mergesort implementation
+
+    Takes an array, which is then split recursively until there is only single element arrays
+
+    Then builds them back up, sorting them as it goes, resulting in O(nlogn) time
+    """
+
+    if len(arr) > 1:
+        # Split array
+        mid_point = int(len(arr) / 2.)
+        lower_half = arr[:mid_point]
+        upper_half = arr[mid_point:]
+        merge_sort(lower_half)
+        merge_sort(upper_half)
+
+        # This only occurs after arr is split into all 1 element arrays
+        # Starts with 2 subarrays of 1, building up to the whole list
+
+        i = 0
+        j = 0
+        k = 0
+        while i < len(lower_half) and j < len(upper_half):
+            if lower_half[i] < upper_half[j]:
+                arr[k] = lower_half[i]
+                i += 1
+            else:
+                arr[k] = upper_half[j]
+                j += 1
+            k += 1
+
+        # Now if N is not even, then either the lower or upper half will have extra elements
+        # so need to add those, already in order, elements
+        for l in range(i,len(lower_half)):
+            arr[k] = lower_half[l]
+            k += 1
+        for l in range(j, len(upper_half)):
+            arr[k] = upper_half[l]
+            k += 1
+
+        # Now arr is sorted, return it
+        return arr
+
+# Then only select ones that fall within that range between the two
+for index, elements in enumerate(haloes):
+    radiii, _, _ = elements
+    haloes[index][0] = merge_sort(radiii)
+
+selected_satallites = []
+
+for radiii, _, _ in haloes:
+    # Now they are sorted, only select the ones inbetween the radial values
+    start_index = -1
+    end_index = -1
+    for index, element in enumerate(radiii):
+        if element > inner_radius and start_index < 0:
+            start_index = index
+            break
+    # Reversing list and going backwards means we can ignore where most of the galaxies are, and only select the one
+    # that creates the border of the bin
+    for index, element in reversed(list(enumerate(radiii))):
+        if element < outer_radius and end_index < 0:
+            end_index = index+1 # Need to add one since slice does not include the last element specified
+            break
+    selected_satallites.append(radiii[start_index:end_index])
+
+selected_satallites = np.asarray(selected_satallites)
+
+nums_in_bins = [len(sat) for sat in selected_satallites]
+nums_in_bins = merge_sort(nums_in_bins)
+
+print("Median Value: {}".format(nums_in_bins[int(len(nums_in_bins)/2)]))
+print("16th Percentile: {}".format(nums_in_bins[int(0.16*len(nums_in_bins))]))
+print("84th Percentile: {}".format(nums_in_bins[int(0.84*len(nums_in_bins))]))
+
+poisson_values = []
+for value in np.arange(nums_in_bins[0], 33):
+    poisson_values.append(poisson(sum(nums_in_bins)/len(nums_in_bins), 0))
+print("Poisson: {}".format(poisson_values))
+
+plt.hist(nums_in_bins, bins=1000)
+plt.plot(np.arange(nums_in_bins[0], 33), poisson_values, 'r')
+plt.show()
+
+
+exit()
+
+
+
+
+# Now calculate median, 16th, 84th of the total bins
 
 def sort_radii():
     raise NotImplementedError
