@@ -340,6 +340,26 @@ def bisect(arr, value):
     return low
 
 def one_d_cube_spline(x, y):
+    """
+    This method was chosen because in the slides it acheived fairly good fits hile being simpler than the Akima spline
+
+    Natural because at i= and i = N-1, setting y'' = 0
+
+    This is then the equation" y = Ayi + Byi+1 + Cy''i + Dy''i+1
+
+    A = (xi+1 - x) / (xi + 1 - xi)
+    B = 1 - A
+    C = 1/6*(A^3-A)(xi+1-xi)^2
+    D = 1/6*(B^3 - B)(xi+1-xi)^2
+
+    first deriv = y2-y1/x2-x + (1-2t)*a(1-t)+bt/(x2-x1) + t(1-t)b-a/x2-x1
+
+    second deriv 2*(b-2a+(a-b)*3t)/(x2-x1)^2)
+
+    t(x) = x - x1/x2 - x1
+    a =
+    :return:
+    """
     len_x = len(x)
 
     h = [x[i+1]-x[i] for i in range(len_x-1)]
@@ -375,8 +395,9 @@ def one_d_cube_spline(x, y):
              (c[i + 1] + 2.0 * c[i]) / 3.0
         b.append(tb)
 
-    xs = np.arange(0, 5, 0.0001)
-    print("X Min: {} Max: {}".format(x[0], x[-1]))
+    return y, b, c, d
+
+def estimate_with_spline(xs,y,b,c,d):
     interpolated_points = []
     for point in xs:
         point = np.log10(point)
@@ -391,147 +412,21 @@ def one_d_cube_spline(x, y):
         dx = point - x[i]
         interpolated_points.append(y[i] + b[i] * dx + c[i] * dx ** 2 + d[i] * dx ** 3)
 
-    plt.plot(xs, interpolated_points)
-    plt.scatter(interp_data_points, measured_values, s=10)
-    plt.xscale("log")
-    plt.yscale("log")
-    plt.show()
-    plt.cla()
-
-    return y, b, c, d
-
-def estimate_with_spline(xs,y,b,c,d):
-    interpolated_points = []
-    import bisect
-    for point in xs:
-        point = np.log10(point)
-        # Get closest point first
-        if point < x[0]:
-            interpolated_points.append(None)
-            continue
-        elif point > x[-1]:
-            interpolated_points.append(None)
-            continue
-        i = bisect.bisect(x, point) - 1
-        dx = point - x[i]
-        interpolated_points.append(y[i] + b[i] * dx + c[i] * dx ** 2 + d[i] * dx ** 3)
+    return xs, interpolated_points
 
 x = [1e-4, 1e-2, 1e-1, 1, 5]
 A = 1 / integration_alg(sat_equation_no_A, lower_bound=0, upper_bound=5, number_of_steps=10000)
 y = [np.log10(sat_equation(r, A)) for r in x]
 
-one_d_cube_spline(np.log10(x), y)
-exit()
+y,b_interp,c_interp,d_interp = one_d_cube_spline(np.log10(x), y)
+xs, interpolated_points = estimate_with_spline(xs=np.arange(0, 5, 0.0001),y=y, b=b_interp,c=c_interp,d=d_interp)
 
-
-# TODO Add interpolation method here, cubic spline, etc.
-def cubic_spline(xdata, ydata):
-    """
-    This method was chosen because in the slides it acheived fairly good fits hile being simpler than the Akima spline
-
-    Natural because at i= and i = N-1, setting y'' = 0
-
-    This is then the equation" y = Ayi + Byi+1 + Cy''i + Dy''i+1
-
-    A = (xi+1 - x) / (xi + 1 - xi)
-    B = 1 - A
-    C = 1/6*(A^3-A)(xi+1-xi)^2
-    D = 1/6*(B^3 - B)(xi+1-xi)^2
-
-    first deriv = y2-y1/x2-x + (1-2t)*a(1-t)+bt/(x2-x1) + t(1-t)b-a/x2-x1
-
-    second deriv 2*(b-2a+(a-b)*3t)/(x2-x1)^2)
-
-    t(x) = x - x1/x2 - x1
-    a =
-    :return:
-    """
-
-    num_points = len(xdata) - 1
-
-    # Assume sorted points, because these will be
-
-    A = np.zeros(shape=(4*num_points,4*num_points))
-    b = np.zeros(shape=(4*num_points,1)) # RHS
-
-    for i in range(num_points):
-        # 2n equations from
-        A[i][4*i+0] = xdata[i]**3
-        A[i][4*i+1] = xdata[i]**2
-        A[i][4*i+2] = xdata[i]
-        A[i][4*i+3] = 1
-        b[i] = ydata[i]
-        # This is x3+x2+x+1 = y
-
-        A[num_points+i][4*i+0] = xdata[i+1]**3
-        A[num_points+i][4*i+1] = xdata[i+1]**2
-        A[num_points+i][4*i+2] = xdata[i+1]
-        A[num_points+i][4*i+3] = 1
-        b[num_points+i] = ydata[i+1]
-        # This is xi+1**3+xi+1**2+xi+1+1 = yi+1
-
-        if i == 0:
-            continue
-
-        # now for the other 2n-2 equations to make it cubic
-        # 3*a*x**2 + 2*b*c + c = 3*ai+1*xi**2 + 2*bi+1*xi + ci+1
-        # 6ai*xi + 2*bi = 6ai+1*xi + 2*bi+1
-        # For 1 to n-1, so 2n-2 total
-        A[2*num_points+(i-1)][4*(i-1)+0] = 3*xdata[i]**2
-        A[2*num_points+(i-1)][4*(i-1)+1] = 2*xdata[i]
-        A[2*num_points+(i-1)][4*(i-1)+2] = 1
-        A[2*num_points+(i-1)][4*(i-1)+0+4] = -3*xdata[i]**2
-        A[2*num_points+(i-1)][4*(i-1)+1+4] = -2*xdata[i]
-        A[2*num_points+(i-1)][4*(i-1)+2+4] = -1
-        b[2*num_points+(i-1)] = 0
-
-        # Now for the second equation
-        A[3*num_points+(i-1)][4*(i-1)+0] = 6*xdata[i]
-        A[3*num_points+(i-1)][4*(i-1)+1] = 2
-        A[3*num_points+(i-1)][4*(i-1)+0+4] = -6*xdata[i]
-        A[3*num_points+(i-1)][4*(i-1)+1+4] = -2
-        b[3*num_points+(i-1)] = 0
-
-    # For natural spline, set endpoints
-    A[3*num_points-1+0][0+0] += 6*xdata[0]
-    A[3*num_points-1+0][0+1] += 2
-    b[3*num_points-1+0] += 0
-
-    A[3*num_points+num_points-1][4*(num_points-1)+0] += 6*xdata[num_points]
-    A[3*num_points+num_points-1][4*(num_points-1)+1] += 2
-    b[3*num_points+num_points-1] += 0
-
-    from pprint import pprint
-    pprint(A)
-    print()
-    print(b)
-
-    import scipy.linalg
-    x = scipy.linalg.solve(A, b)
-    spline = []
-    act_spline = []
-    for i in range(num_points):
-        spline.append({"u": xdata[i], "v": xdata[i+1],
-                       "a": float(x[4*i+0]),
-                       "b": float(x[4*i+1]),
-                       "c": float(x[4*i+2]),
-                       "d": float(x[4*i+3])})
-
-    print(spline)
-
-    for index, interval in enumerate(interp_data_points):
-        if index == 0:
-            continue
-        for p in spline:
-            if np.isclose(p['u'], interp_data_points[index-1]) and np.isclose(p['v'], interp_data_points[index]):
-                xs = np.linspace(p['u'],p['v'])
-                interpolated_points = [p['a']*i**3+p['b']*i**2+p['c']*i+p['d'] for i in xs]
-                plt.plot(xs, interpolated_points)
-                plt.scatter(interp_data_points, measured_values, s=20)
-                plt.show()
-                plt.cla()
-
-    raise NotImplementedError
+plt.plot(xs, interpolated_points)
+plt.scatter(interp_data_points, measured_values, s=10)
+plt.xscale("log")
+plt.yscale("log")
+plt.show()
+plt.cla()
 
 # Now onto Part c, numerical differentiation
 
@@ -955,6 +850,51 @@ print(A_values.flatten().shape)
 
 # Now have the 3D cube of values, need to write an interpolator for them
 # Can  take the 1D interpolator and apply it to here
+
+# Have to do it N times, where N is the number of AxB for C values, so huge
+# Unless take the closest 8 points
+subcube = A_values[int(len(a_range)/2-2):int(len(a_range)/2+2),int(len(b_range)/2-2):int(len(b_range)/2+2),int(len(b_range)/2-2):int(len(b_range)/2+2)]
+
+print(subcube.shape)
+print(subcube.flatten().shape)
+print(subcube)
+
+# So now try interpolating points based off the 64 points around it, allows for
+# 3D interpolation = 3 1D interpolations
+# Or 3D linear interpolations
+
+def interpolator_3d(a,b,c, cube, size_subcube=1):
+    """
+
+    Interpolator that interpolates in 3D when given a data cube and an x,y,z point in a,b,c range
+
+    :param cube:
+    :return:
+    """
+    # To handle various resolutions of cubes
+    a_range = np.linspace(1.1, 2.6, cube.shape[0])
+    b_range = np.linspace(0.5, 2.1, cube.shape[1])
+    c_range = np.linspace(1.5, 4.1, cube.shape[2])
+
+    # Find the value, using bisect in each dimension
+    a_loc = bisect(a_range, a) -1
+    b_loc = bisect(b_range, b) -1
+    c_loc = bisect(c_range, c) -1
+
+    # now gather the subcube around it
+    # First need to add another layer outside the cube for edge cases. Because we assume its a straight line outside the
+    # spline, we can just copy all the values out one more
+    # Makes sure that there is no index out of bounds for this
+    cube = np.pad(cube, pad_width=size_subcube, mode="edge")
+    subcube = cube[a_loc - size_subcube:a_loc+size_subcube,b_loc-size_subcube:b_loc+size_subcube,c_loc-size_subcube:c_loc+size_subcube]
+
+    # Now onto the actual spline interpolation in 3D
+    # TODO Add 3D spline interpolation based on the subcube
+    # Because there is a spline for each single-width vector in the cube, the number of splines goes up as
+    # N^2, because, for example, adding a single more a column in the interpolation means that b*c more splines must be
+    # generated
+
+
 
 
 """
