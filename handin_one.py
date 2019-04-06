@@ -41,7 +41,7 @@ A = 1/everything else
 """
 
 
-def random_generator(seed, m=2 ** 64, a=2349543, c=913842, a1=21, a2=35, a3=4, a4=4294957665):
+def random_generator(seed, m=2 ** 64 - 1, a=2349543, c=913842, a1=21, a2=35, a3=4, a4=4294957665):
     """
     Generates psuedorandom numbers with a combination of (M)LCC, 64 bit shift, and MWC
     :param seed: Seed to use
@@ -53,13 +53,15 @@ def random_generator(seed, m=2 ** 64, a=2349543, c=913842, a1=21, a2=35, a3=4, a
 
     # First linear congruential generator
     # While true, so the generator never stops making new numbers
+    # This is used to make sure teh XOR shift is 64 bit
+    bit_64 = 0xffffffffffffffff
     while True:
         # This is MLCC part
         generated_number = (a * seed + c) % m
         # Now bit shift
-        generated_number = generated_number ^ (generated_number >> a1)
-        generated_number = generated_number ^ (generated_number << a2)
-        generated_number = generated_number ^ (generated_number >> a3)
+        generated_number = generated_number ^ (generated_number >> a1) & bit_64
+        generated_number = generated_number ^ (generated_number << a2) & bit_64
+        generated_number = generated_number ^ (generated_number >> a3) & bit_64
 
         # Now MWC part
         mwc_out = a4 * (generated_number & (2 ** 32 - 1)) + (generated_number >> 32)
@@ -68,7 +70,7 @@ def random_generator(seed, m=2 ** 64, a=2349543, c=913842, a1=21, a2=35, a3=4, a
         # m = third_output
         mwc_out = mwc_out / m
 
-        if mwc_out >= 1.:
+        if mwc_out > 1.:
             # Have to make it between 1 and 0, so mod 1. makes sure its between 0 and 1 now
             close_to_final = mwc_out % 1.
         else:
@@ -270,19 +272,81 @@ print("A: ", A)
 
 interp_data_points = [1e-4, 1e-2, 1e-1, 1, 5]
 
-measured_values = [sat_equation(r, A) for r in interp_data_points]
+measured_values = [np.log10(sat_equation(r, A)) for r in interp_data_points]
 
 
 # Now need to interpolate between the points
 
+def act_cub_spline(x, y):
+    len_x = len(x)
+
+    h = [x[i+1]-x[i] for i in range(len_x-1)]
+
+    A = np.zeros((len_x,len_x))
+    A[0,0] = 1.
+
+    for i in range(len_x-1):
+        if i != (len_x - 2):
+            A[i+1,i+1] = 2*(h[i] + h[i+1]) # Going down the diagonal, do the 2*(differences)
+        A[i+1, i] = h[i]
+        A[i, i+1] = h[i] # The left and right sode of this one, which is the upper and lower edges
+
+    A[0,1] = 0.0 # so natural cubic spline
+    A[len_x - 1, len_x - 2] = 0.0
+    A[len_x - 1, len_x - 1] = 1.0 # Cubic spline end, should be 0?
+
+    B = np.zeros(len_x) # RHS of equation
+    for i in range(len_x - 2):
+        B[i + 1] = 3*(y[i+2] - y[i+1]) / h[i+1] - 3*(y[i+1] - y[i])/h[i]
+
+    import scipy.linalg
+    c = scipy.linalg.solve(A, B)
+
+    # Now can calculate B and D
+    d = []
+    b = []
+    for i in range(len_x - 1):
+        d.append((c[i + 1] - c[i]) / (3.0 * h[i]))
+        tb = (y[i + 1] - y[i]) / h[i] - h[i] * \
+             (c[i + 1] + 2.0 * c[i]) / 3.0
+        b.append(tb)
+
+    xs = np.arange(0, 5, 0.0001)
+    print("X Min: {} Max: {}".format(x[0], x[-1]))
+    interpolated_points = []
+    import bisect
+    for point in xs:
+        point = np.log10(point)
+        # Get closest point first
+        if point < x[0]:
+            interpolated_points.append(None)
+            continue
+        elif point > x[-1]:
+            interpolated_points.append(None)
+            continue
+        i = bisect.bisect(x, point) - 1
+        dx = point - x[i]
+        interpolated_points.append(y[i] + b[i] * dx + c[i] * dx ** 2 + d[i] * dx ** 3)
+
+    plt.plot(xs, interpolated_points)
+    plt.scatter(interp_data_points, measured_values, s=10)
+    plt.xscale("log")
+    plt.yscale("log")
+    plt.show()
+    plt.cla()
+
+x = [1e-4, 1e-2, 1e-1, 1, 5]
+A = 1 / integration_alg(sat_equation_no_A, lower_bound=0, upper_bound=5, number_of_steps=10000)
+y = [np.log10(sat_equation(r, A)) for r in x]
+
+act_cub_spline(np.log10(x), y)
+exit()
+
+
 # TODO Add interpolation method here, cubic spline, etc.
-def cubic_spline():
+def cubic_spline(xdata, ydata):
     """
     This method was chosen because in the slides it acheived fairly good fits hile being simpler than the Akima spline
-
-    NEVERMIND I am using Linear interpolation because of the difficulties in cubic spline
-
-
 
     Natural because at i= and i = N-1, setting y'' = 0
 
@@ -293,13 +357,98 @@ def cubic_spline():
     C = 1/6*(A^3-A)(xi+1-xi)^2
     D = 1/6*(B^3 - B)(xi+1-xi)^2
 
+    first deriv = y2-y1/x2-x + (1-2t)*a(1-t)+bt/(x2-x1) + t(1-t)b-a/x2-x1
+
+    second deriv 2*(b-2a+(a-b)*3t)/(x2-x1)^2)
+
+    t(x) = x - x1/x2 - x1
+    a =
     :return:
     """
 
+    num_points = len(xdata) - 1
 
+    # Assume sorted points, because these will be
 
+    A = np.zeros(shape=(4*num_points,4*num_points))
+    b = np.zeros(shape=(4*num_points,1)) # RHS
 
+    for i in range(num_points):
+        # 2n equations from
+        A[i][4*i+0] = xdata[i]**3
+        A[i][4*i+1] = xdata[i]**2
+        A[i][4*i+2] = xdata[i]
+        A[i][4*i+3] = 1
+        b[i] = ydata[i]
+        # This is x3+x2+x+1 = y
 
+        A[num_points+i][4*i+0] = xdata[i+1]**3
+        A[num_points+i][4*i+1] = xdata[i+1]**2
+        A[num_points+i][4*i+2] = xdata[i+1]
+        A[num_points+i][4*i+3] = 1
+        b[num_points+i] = ydata[i+1]
+        # This is xi+1**3+xi+1**2+xi+1+1 = yi+1
+
+        if i == 0:
+            continue
+
+        # now for the other 2n-2 equations to make it cubic
+        # 3*a*x**2 + 2*b*c + c = 3*ai+1*xi**2 + 2*bi+1*xi + ci+1
+        # 6ai*xi + 2*bi = 6ai+1*xi + 2*bi+1
+        # For 1 to n-1, so 2n-2 total
+        A[2*num_points+(i-1)][4*(i-1)+0] = 3*xdata[i]**2
+        A[2*num_points+(i-1)][4*(i-1)+1] = 2*xdata[i]
+        A[2*num_points+(i-1)][4*(i-1)+2] = 1
+        A[2*num_points+(i-1)][4*(i-1)+0+4] = -3*xdata[i]**2
+        A[2*num_points+(i-1)][4*(i-1)+1+4] = -2*xdata[i]
+        A[2*num_points+(i-1)][4*(i-1)+2+4] = -1
+        b[2*num_points+(i-1)] = 0
+
+        # Now for the second equation
+        A[3*num_points+(i-1)][4*(i-1)+0] = 6*xdata[i]
+        A[3*num_points+(i-1)][4*(i-1)+1] = 2
+        A[3*num_points+(i-1)][4*(i-1)+0+4] = -6*xdata[i]
+        A[3*num_points+(i-1)][4*(i-1)+1+4] = -2
+        b[3*num_points+(i-1)] = 0
+
+    # For natural spline, set endpoints
+    A[3*num_points-1+0][0+0] += 6*xdata[0]
+    A[3*num_points-1+0][0+1] += 2
+    b[3*num_points-1+0] += 0
+
+    A[3*num_points+num_points-1][4*(num_points-1)+0] += 6*xdata[num_points]
+    A[3*num_points+num_points-1][4*(num_points-1)+1] += 2
+    b[3*num_points+num_points-1] += 0
+
+    from pprint import pprint
+    pprint(A)
+    print()
+    print(b)
+
+    import scipy.linalg
+    x = scipy.linalg.solve(A, b)
+    spline = []
+    act_spline = []
+    for i in range(num_points):
+        spline.append({"u": xdata[i], "v": xdata[i+1],
+                       "a": float(x[4*i+0]),
+                       "b": float(x[4*i+1]),
+                       "c": float(x[4*i+2]),
+                       "d": float(x[4*i+3])})
+
+    print(spline)
+
+    for index, interval in enumerate(interp_data_points):
+        if index == 0:
+            continue
+        for p in spline:
+            if np.isclose(p['u'], interp_data_points[index-1]) and np.isclose(p['v'], interp_data_points[index]):
+                xs = np.linspace(p['u'],p['v'])
+                interpolated_points = [p['a']*i**3+p['b']*i**2+p['c']*i+p['d'] for i in xs]
+                plt.plot(xs, interpolated_points)
+                plt.scatter(interp_data_points, measured_values, s=20)
+                plt.show()
+                plt.cla()
 
     raise NotImplementedError
 
@@ -307,6 +456,7 @@ def cubic_spline():
 
 def n(x):
     return three_d_integral(x, A, 1)
+
 
 def analytic_derivative(b):
     """
@@ -317,6 +467,7 @@ def analytic_derivative(b):
     """
     x = b
     return (4 * np.pi * A * b ** 3 * (x / b) ** a * np.exp(-(x / b) ** c) * (a - c * (x / b) ** c - 1) / (x ** 2))
+
 
 def derivative(func, b, step_size=0.1, iterations=5):
     """
@@ -334,17 +485,18 @@ def derivative(func, b, step_size=0.1, iterations=5):
     :return:
     """
 
-    def A_deriv(n,m):
+    def A_deriv(n, m):
         if n == 1:
-            result = (func(b + step_size/2**(m-1)) - func(b - step_size/(2**(m-1))))/(2*step_size/(2**(m-1)))
+            result = (func(b + step_size / 2 ** (m - 1)) - func(b - step_size / (2 ** (m - 1)))) / (
+                        2 * step_size / (2 ** (m - 1)))
         else:
-            result = (4**(n-1)*A_deriv(n-1, m+1) - A_deriv(n-1, m))/(4**(n-1)-1)
+            result = (4 ** (n - 1) * A_deriv(n - 1, m + 1) - A_deriv(n - 1, m)) / (4 ** (n - 1) - 1)
         return result
 
     best_approx = np.inf
     m = 1
     for i in range(iterations):
-        deriv = A_deriv(i+1, m)
+        deriv = A_deriv(i + 1, m)
         m += 1
         if analytic_derivative(b) - deriv < best_approx:
             best_approx = deriv
@@ -354,7 +506,10 @@ def derivative(func, b, step_size=0.1, iterations=5):
 
 print("Analytic: {}\n Numerical: {}\n Difference: {}\n".format(np.round(analytic_derivative(b), 12),
                                                                np.round(derivative(n, b), 12),
-                                                               np.round(analytic_derivative(b), 12) - np.round(derivative(n, b), 12)))
+                                                               np.round(analytic_derivative(b), 12) - np.round(
+                                                                   derivative(n, b), 12)))
+
+
 # Part D Sampling
 
 def random_sample(func, xmin, xmax, ymin, ymax, num_samples):
@@ -381,13 +536,13 @@ def random_sample(func, xmin, xmax, ymin, ymax, num_samples):
     return inputs, outputs
 
 
-rand_sample_x, rand_sample_y = random_sample(three_d_integral, 0, 5, 0, 5, 10000)
+rand_sample_x, rand_sample_y = random_sample(three_d_integral, 1e-8, 5, 1e-8, 5, 10000)
 print("Max: ", np.max(rand_sample_x))
 plt.scatter(rand_sample_x, rand_sample_y, s=1)
 plt.plot(np.arange(0, 5, 0.001), [three_d_integral(i, A, 1) for i in np.arange(0, 5, 0.001)], 'r')
 plt.title("Random Sampling")
-#plt.xscale('log')
-#plt.yscale('log')
+# plt.xscale('log')
+# plt.yscale('log')
 plt.show()
 
 
@@ -408,7 +563,7 @@ def create_halo(number_of_satallites):
 
 
 # Now outputting them
-#for r, p, t in create_halo(100):
+# for r, p, t in create_halo(100):
 #    print("R: {} $\phi$: {} $\\theta$: {}".format(r, p, t))
 
 
@@ -421,10 +576,10 @@ def n(x):
     return three_d_integral(x, A, 100)
 
 
-
 # Need to Generate 1000 Halos Now
 
-log_bins = np.logspace(-4, 0.69897000433, 21) # Need 21 for the end of the bins, goes from 1e-4 to 5 in logspace
+log_bins = np.logspace(-4, 0.69897000433, 21)  # Need 21 for the end of the bins, goes from 1e-4 to 5 in logspace
+
 
 def create_haloes(number_of_haloes):
     """
@@ -444,6 +599,7 @@ def create_haloes(number_of_haloes):
     radii = np.concatenate(radii)
     return haloes, radii
 
+
 def calc_avg_satallites_per_bin(bin_values, bins, num_haloes):
     """
     Divide bin values by width of bins, then by number of haloes used to create it
@@ -456,11 +612,13 @@ def calc_avg_satallites_per_bin(bin_values, bins, num_haloes):
     new_averages = []
 
     for index, element in enumerate(bin_values):
-        avg_per_halo = element / num_haloes # Divide by number of haloes to get average per halo
-        avg_per_bin_width = avg_per_halo / (bins[index+1] - bins[index]) # Divide by bin width to normalize for bin width
+        avg_per_halo = element / num_haloes  # Divide by number of haloes to get average per halo
+        avg_per_bin_width = avg_per_halo / (
+                    bins[index + 1] - bins[index])  # Divide by bin width to normalize for bin width
         new_averages.append(avg_per_bin_width)
 
     return np.asarray(new_averages)
+
 
 haloes, radii = create_haloes(1000)
 bin_values, bins, _ = plt.hist(radii, bins=log_bins)
@@ -469,7 +627,7 @@ new_bin_values = calc_avg_satallites_per_bin(bin_values, bins, 1000)
 plt.title("Log-Log of N(x)")
 plt.xscale("log")
 plt.yscale("log")
-plt.plot(np.arange(1e-4,5,0.001), n(np.arange(1e-4,5,0.001)), 'r')
+plt.plot(np.arange(1e-4, 5, 0.001), n(np.arange(1e-4, 5, 0.001)), 'r')
 plt.hist(np.logspace(-4, 0.69897000433, 20), weights=new_bin_values, bins=log_bins)
 plt.show()
 
@@ -479,10 +637,12 @@ Part f Root Finding
 
 """
 
+
 def n(x):
     return three_d_integral(x, A, 100)
 
-def root_finder(bracket=[1e-8,5], epsilon=0.001, max_iter=500, root_to_find=1/2):
+
+def root_finder(bracket=[1e-8, 5], epsilon=0.001, max_iter=500, root_to_find=1 / 2):
     """
     Find the roots, easiest method to do is the bisection method, so deciding on that one
 
@@ -500,14 +660,14 @@ def root_finder(bracket=[1e-8,5], epsilon=0.001, max_iter=500, root_to_find=1/2)
     """
 
     for i in range(max_iter):
-        mid_point = (bracket[0]+bracket[1])/2.
+        mid_point = (bracket[0] + bracket[1]) / 2.
         # Now check to see which half the root is in
         # Is the midpoint the root?
         mid_value = n(mid_point) - root_to_find
         f_a = n(bracket[0]) - root_to_find
-        if f_a * mid_value < 0: # They have opposite signs
+        if f_a * mid_value < 0:  # They have opposite signs
             bracket[1] = mid_point
-        elif -1.*epsilon < mid_value < epsilon: # This is the root within epsilon
+        elif -1. * epsilon < mid_value < epsilon:  # This is the root within epsilon
             return mid_point
         else:
             # Other two have opposite signs
@@ -515,16 +675,16 @@ def root_finder(bracket=[1e-8,5], epsilon=0.001, max_iter=500, root_to_find=1/2)
         # Now check if it has converged, that is if the space between the brackets is within epsilon
     # If it gets to here, then no root found after the max iterations
     print("Root not found in {} iterations".format(max_iter))
-    return (bracket[0] + bracket[1])/2.
+    return (bracket[0] + bracket[1]) / 2.
 
 
-Nmax = n(np.arange(1e-4,5,0.001))
+Nmax = n(np.arange(1e-4, 5, 0.001))
 max_index = list(Nmax).index(max(Nmax))
-max_val = np.arange(1e-4,5,0.001)[max_index]
+max_val = np.arange(1e-4, 5, 0.001)[max_index]
 
 # There are two roots in this problem, as half the max happens on either side of the max
-lower_root = root_finder(bracket=[1e-8,max_val], root_to_find=n(max_val)/2.)
-upper_root = root_finder(bracket=[max_val, 5], root_to_find=n(max_val)/2.)
+lower_root = root_finder(bracket=[1e-8, max_val], root_to_find=n(max_val) / 2.)
+upper_root = root_finder(bracket=[max_val, 5], root_to_find=n(max_val) / 2.)
 print("Root = {}, {}".format(lower_root, upper_root))
 print("N(x) Value at Roots: {} {} \n Max Value: {}".format(n(lower_root), n(upper_root), n(max_val)))
 
@@ -537,7 +697,9 @@ Part g) Sorting, histogram, and Poisson checking
 # Get the radial bin with the largest number of galaxies
 index_of_radial_bin_max = list(bin_values).index(max(bin_values))
 inner_radius = log_bins[index_of_radial_bin_max]
-outer_radius = log_bins[index_of_radial_bin_max+1]
+outer_radius = log_bins[index_of_radial_bin_max + 1]
+
+
 # Now sort the 1000 haloes on their ownm using Mergesort
 def merge_sort(arr):
     """
@@ -574,7 +736,7 @@ def merge_sort(arr):
 
         # Now if N is not even, then either the lower or upper half will have extra elements
         # so need to add those, already in order, elements
-        for l in range(i,len(lower_half)):
+        for l in range(i, len(lower_half)):
             arr[k] = lower_half[l]
             k += 1
         for l in range(j, len(upper_half)):
@@ -583,6 +745,7 @@ def merge_sort(arr):
 
         # Now arr is sorted, return it
         return arr
+
 
 # Then only select ones that fall within that range between the two
 for index, elements in enumerate(haloes):
@@ -603,7 +766,7 @@ for radiii, _, _ in haloes:
     # that creates the border of the bin
     for index, element in reversed(list(enumerate(radiii))):
         if element < outer_radius and end_index < 0:
-            end_index = index+1 # Need to add one since slice does not include the last element specified
+            end_index = index + 1  # Need to add one since slice does not include the last element specified
             break
     selected_satallites.append(radiii[start_index:end_index])
 
@@ -612,47 +775,136 @@ selected_satallites = np.asarray(selected_satallites)
 nums_in_bins = [len(sat) for sat in selected_satallites]
 nums_in_bins = merge_sort(nums_in_bins)
 
-print("Median Value: {}".format(nums_in_bins[int(len(nums_in_bins)/2)]))
-print("16th Percentile: {}".format(nums_in_bins[int(0.16*len(nums_in_bins))]))
-print("84th Percentile: {}".format(nums_in_bins[int(0.84*len(nums_in_bins))]))
+print("Median Value: {}".format(nums_in_bins[int(len(nums_in_bins) / 2)]))
+print("16th Percentile: {}".format(nums_in_bins[int(0.16 * len(nums_in_bins))]))
+print("84th Percentile: {}".format(nums_in_bins[int(0.84 * len(nums_in_bins))]))
 
 poisson_values = []
-for value in np.arange(nums_in_bins[0], 33):
-    poisson_values.append(poisson(sum(nums_in_bins)/len(nums_in_bins), 0))
+start_poisson = nums_in_bins[0]
+for value in np.arange(start_poisson, 33):
+    poisson_values.append(poisson(sum(nums_in_bins) / len(nums_in_bins), 0))
 print("Poisson: {}".format(poisson_values))
 
-plt.hist(nums_in_bins, bins=1000)
-plt.plot(np.arange(nums_in_bins[0], 33), poisson_values, 'r')
+#print(max(np.asarray(nums_in_bins)/sum(nums_in_bins)))
+#print(min(np.asarray(nums_in_bins)/sum(nums_in_bins)))
+#nums_in_bins = np.asarray(nums_in_bins)/sum(nums_in_bins)
+bin_values, _, _ = plt.hist(nums_in_bins, bins=1000)
+plt.cla()
+bin_values = bin_values / sum(bin_values)
+plt.hist(np.linspace(min(nums_in_bins), max(nums_in_bins), 1000), bins=1000, weights=bin_values)
+plt.plot(np.arange(start_poisson, 33), poisson_values, 'r')
 plt.show()
 
+"""
 
-exit()
+Part 2h interpolate in 3D
 
-
-
-
-# Now calculate median, 16th, 84th of the total bins
-
-def sort_radii():
-    raise NotImplementedError
+"""
 
 
-def central_difference():
-    raise NotImplementedError
+def sat_equation_A_cube(r, a, b, c):
+    """
+    This is for finding A, only need the radius then
+    :param r: Radius in terms of r = Radius/(Virial Radius)
+    :return:
+    """
+    volume_of_sphere = 4 * np.pi * r ** 2
+    return volume_of_sphere * ((r / b) ** (a - 3) * np.exp(-(r / b) ** c))
 
 
-def p_x(x):
-    raise NotImplementedError
+def integration_alg(func, lower_bound, upper_bound, number_of_steps, a, b, c):
+    """
+
+    :param func: function to use in integration, when given a radius, will return the value at that point
+    :param lower_bound: lower bound of integration
+    :param upper_bound: upper bound of integration
+    :param number_of_steps: number of steps to do
+    :return:
+    """
+
+    # Current method if the midpoint rule, as the function is an improper integral from the lower bound being 0
+
+    # Need to integrate from lower_bound to upper_bound in number_of_steps
+
+    # lower bound is 0, if there is a radius of 0, then no satallites in it
+    integration_value = 0
+    step_size = (upper_bound - lower_bound) / number_of_steps
+    for i in range(number_of_steps):
+        if i != 0:
+            # Current step can be just i*step_size but only if integral always starts at 0
+            # since it might not, need a starting point otherwise:
+            current_step = lower_bound + i * step_size
+            prev_step = lower_bound + (i - 1) * step_size
+
+            # Current midpoint is the current step + the prev step divided by 2
+            # F(mk) where mk = (tk + tk-1)/2
+            current_midpoint = (current_step + prev_step) / 2
+            integration_value += func(current_midpoint, a, b, c)
+
+    # Last bit is the multiplication by the step size to get the full value
+    integration_value *= step_size
+
+    return integration_value
+
+    # To get A, realize that <N_sat> is on both sides, so equation becomes
+    # A * integral = 1, so A = 1 / integral, to do it then need different equation than in sat_equation
 
 
-def interpolation():
-    raise NotImplementedError
+# First need to create the 3D cube of values
+b_range = np.arange(0.5, 2.1, 0.1)
+a_range = np.arange(1.1, 2.6, 0.1)
+c_range = np.arange(1.5, 4.1, 0.1)
+
+A_values = np.zeros((len(a_range), len(b_range), len(c_range)))
+indicies = []
+# now fill in the 6240 values in the 3D cube of values
+for i, a in enumerate(a_range):
+    for j, b in enumerate(b_range):
+        for k, c in enumerate(c_range):
+            A_values[i, j, k] = 1 / integration_alg(sat_equation_A_cube,
+                                                    lower_bound=0,
+                                                    upper_bound=5,
+                                                    number_of_steps=10000,
+                                                    a=a, b=b, c=c)
+            indicies.append((i,j,k))
+
+print(A_values.flatten().shape)
+
+# TODO Save to file and load as it takes awhile to generate
+
+# Now have the 3D cube of values, need to write an interpolator for them
+# Can  take the 1D interpolator and apply it to here
+
 
 """
 
 Part 3
 
 """
+
+# Read in file, one at a time for memory limits
+
+with open("satgals_m12.txt", "r") as mass_haloes:
+    mass_haloes.readline()
+    mass_haloes.readline()
+    mass_haloes.readline()
+    # Now next one will be number of haloes
+    num_haloes = mass_haloes.readline()
+    haloes = []
+    for line in mass_haloes:
+        if "#" in line:
+            # new halo
+            haloes.append([])
+        else:
+            try:
+                radius = float(line.split(" ")[0])
+                haloes[-1].append(radius)
+            except:
+                print("No Radius, but not #")
+                print(line)
+
+
+
 
 """
 
