@@ -863,7 +863,7 @@ print(subcube)
 # 3D interpolation = 3 1D interpolations
 # Or 3D linear interpolations
 
-def interpolator_3d(a,b,c, cube, size_subcube=1):
+def interpolator_3d(a,b,c, cube, size_subcube=2):
     """
 
     Interpolator that interpolates in 3D when given a data cube and an x,y,z point in a,b,c range
@@ -893,6 +893,13 @@ def interpolator_3d(a,b,c, cube, size_subcube=1):
     # Because there is a spline for each single-width vector in the cube, the number of splines goes up as
     # N^2, because, for example, adding a single more a column in the interpolation means that b*c more splines must be
     # generated
+    #(1) Per-formMspline interpolations to get a vector of valuesy.x1i;x2/,iD0;:::;M1.
+    # (2)  Construct  a  one-dimensional  spline  through those  values.
+    # (3)  Finally,  spline-interpolate to the desired valuey.x1;x2/
+
+    # So plan is to do M splines through c_range first, to get a 2D array of y(ai,bi,c)
+    # Then N splines through b space to get 1D array of y(ai,b,c)
+    # Finally, 1D spline through ai to get the final value of y(a,b,c)
 
 
 
