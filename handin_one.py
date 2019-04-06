@@ -277,73 +277,9 @@ measured_values = [np.log10(sat_equation(r, A)) for r in interp_data_points]
 
 # Now need to interpolate between the points
 
-def LU(A, b):
-
-    n = len(A) # Give us total of lines
-
-    # (2) Fill L matrix and its diagonal with 1
-    L = [[0 for i in range(n)] for i in range(n)]
-    for i in range(0,n):
-        L[i][i] = 1
-
-    # (3) Fill U matrix
-    U = [[0 for i in range(0,n)] for i in range(n)]
-    for i in range(0,n):
-        for j in range(0,n):
-            U[i][j] = A[i][j]
-
-    n = len(U)
-
-    # (4) Find both U and L matrices
-    for i in range(0,n): # for i in [0,1,2,..,n]
-        # (4.1) Find the maximun value in a column in order to change lines
-        maxElem = abs(U[i][i])
-        maxRow = i
-        for k in range(i+1, n): # Interacting over the next line
-            if(abs(U[k][i]) > maxElem):
-                maxElem = abs(U[k][i]) # Next line on the diagonal
-                maxRow = k
-
-        # (4.2) Swap the rows pivoting the maxRow, i is the current row
-        for k in range(i, n): # Interacting column by column
-            tmp=U[maxRow][k]
-            U[maxRow][k]=U[i][k]
-            U[i][k]=tmp
-
-        # (4.3) Subtract lines
-        for k in range(i+1,n):
-            c = -U[k][i]/float(U[i][i])
-            L[k][i] = c # (4.4) Store the multiplier
-            for j in range(i, n):
-                U[k][j] += c*U[i][j] # Multiply with the pivot line and subtract
-
-        # (4.5) Make the rows bellow this one zero in the current column
-        for k in range(i+1, n):
-            U[k][i]=0
-
-    n = len(L)
-
-    # (5) Perform substitutioan Ly=b
-    y = [0 for i in range(n)]
-    for i in range(0,n,1):
-        y[i] = b[i]/float(L[i][i])
-        for k in range(0,i,1):
-            y[i] -= y[k]*L[i][k]
-
-    n = len(U)
-
-    # (6) Perform substitution Ux=y
-    x = [0. for i in range(n)]
-    for i in range(n-1,-1,-1):
-        x[i] = y[i]/float(U[i][i])
-        for k in range (i-1,-1,-1):
-            U[i] -= x[i]*U[i][k]
-
-    return x
-
 def lu_factor(A):
     """
-        LU factorization with partial pivorting
+        LU factorization with partial pivoting
 
         Overwrite A with:
             U (upper triangular) and (unit Lower triangular) L
@@ -367,12 +303,14 @@ def lu_factor(A):
 
     return [A,piv]
 
+
 def ufsub(L,b):
     """ Unit row oriented forward substitution """
     for i in range(L.shape[0]):
         for j in range(i):
             b[i] -= L[i,j]*b[j]
     return b
+
 
 def bsub(U,y):
     """ Row oriented backward substitution """
@@ -381,57 +319,6 @@ def bsub(U,y):
             y[i] -= U[i,j]*y[j]
         y[i] = y[i]/U[i,i]
     return y
-
-
-
-def solve_equation(lhs, rhs):
-    """
-    Solves ax = b, with lhs = a, and rhs = b
-
-    Does this through Guassian elimination to create a triangular matrix, which is then used to calculate the value
-
-    :param lhs:
-    :param rhs:
-    :return:
-    """
-    rhs.shape = (len(rhs),1)
-    augmented_matrix = np.hstack([lhs, rhs])
-
-    n = len(augmented_matrix)
-    print(n)
-
-    for i in range(0, n):
-        # Search for maximum in this column
-        maxEl = abs(augmented_matrix[i][i])
-        maxRow = i
-        for k in range(i+1, n):
-            if abs(augmented_matrix[k][i]) > maxEl:
-                maxEl = abs(augmented_matrix[k][i])
-                maxRow = k
-
-        # Swap maximum row with current row (column by column)
-        for k in range(i, n+1):
-            tmp = augmented_matrix[maxRow][k]
-            augmented_matrix[maxRow][k] = augmented_matrix[i][k]
-            augmented_matrix[i][k] = tmp
-
-        # Make all rows below this one 0 in current column
-        for k in range(i+1, n):
-            c = -augmented_matrix[k][i]/augmented_matrix[i][i]
-            for j in range(i, n+1):
-                if i == j:
-                    augmented_matrix[k][j] = 0
-                else:
-                    augmented_matrix[k][j] += c * augmented_matrix[i][j]
-
-    # Solve equation Ax=b for an upper triangular matrix A
-    x = [0 for i in range(n)]
-    for i in range(n-1, -1, -1):
-        x[i] = augmented_matrix[i][n]/augmented_matrix[i][i]
-        for k in range(i-1, -1, -1):
-            augmented_matrix[k][n] -= augmented_matrix[k][i] * x[i]
-    return x
-
 
 def bisect(arr, value):
     """
@@ -445,14 +332,12 @@ def bisect(arr, value):
     high = len(arr)
     while low < high:
         mid = (low+high)//2
-        if value < a[mid]:
+        if value < arr[mid]:
             high = mid
         else:
             low = mid+1
 
     return low
-
-
 
 def one_d_cube_spline(x, y):
     len_x = len(x)
@@ -476,13 +361,10 @@ def one_d_cube_spline(x, y):
     for i in range(len_x - 2):
         B[i + 1] = 3*(y[i+2] - y[i+1]) / h[i+1] - 3*(y[i+1] - y[i])/h[i]
 
-    print(A)
     LU, piv = lu_factor(A)
-    print(LU)
     B = B[piv]
     ytmp = ufsub(LU, B)
     c = bsub(LU, ytmp)
-    print(c)
 
     # Now can calculate B and D
     d = []
@@ -493,8 +375,9 @@ def one_d_cube_spline(x, y):
              (c[i + 1] + 2.0 * c[i]) / 3.0
         b.append(tb)
 
-    interpolated_points = []
     xs = np.arange(0, 5, 0.0001)
+    print("X Min: {} Max: {}".format(x[0], x[-1]))
+    interpolated_points = []
     for point in xs:
         point = np.log10(point)
         # Get closest point first
@@ -509,8 +392,11 @@ def one_d_cube_spline(x, y):
         interpolated_points.append(y[i] + b[i] * dx + c[i] * dx ** 2 + d[i] * dx ** 3)
 
     plt.plot(xs, interpolated_points)
-    plt.scatter(x,y, c='r')
+    plt.scatter(interp_data_points, measured_values, s=10)
+    plt.xscale("log")
+    plt.yscale("log")
     plt.show()
+    plt.cla()
 
     return y, b, c, d
 
