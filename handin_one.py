@@ -1,15 +1,19 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+seed = 5227
+
+print("The Seed for this project is: {}".format(seed))
+
 
 def poisson(lam, k):
-    # TODO Makes almost zero for some values, need to change calculation
     """
     Possion Function (lambda^k)*(e^-lambda)/(k!)
     :param lam:
     :param k:
     :return:
     """
+    # The exponential part, pretty much a direct translation from eqn. to code
     exponent_part = np.float64(np.exp(-1. * lam))
     first_part = np.float64(lam ** k)
     # Factorial part....
@@ -21,33 +25,25 @@ def poisson(lam, k):
     return final_result
 
 
-print(poisson(1, 0))
-print(poisson(5, 10))
-print(poisson(3, 21))
-print(poisson(2.6, 40))
+print("The Poisson value for $\lambda$ = {} and k = {} is: {} ".format(1, 0, poisson(1, 0)))
+print("The Poisson value for $\lambda$ = {} and k = {} is: {} ".format(5, 10, poisson(5, 10)))
+print("The Poisson value for $\lambda$ = {} and k = {} is: {} ".format(3, 21, poisson(2.6, 40)))
+
+
 # print(poisson(101,200))
-
-seed = 5227
-
-"""
-
-Add x^2*4*pi for a 1D integral to make it the spherical one
-
-Use midpoint rule, since there is a 0
-
-A = 1/everything else
-
-
-"""
 
 
 def random_generator(seed, m=2 ** 64 - 1, a=2349543, c=913842, a1=21, a2=35, a3=4, a4=4294957665):
     """
-    Generates psuedorandom numbers with a combination of (M)LCC, 64 bit shift, and MWC
+        Generates psuedorandom numbers with a combination of (M)LCC, 64 bit shift, and MWC
     :param seed: Seed to use
-    :param m:
-    :param a:
-    :param c:
+    :param m: Determines period of the MLCC
+    :param a: For the MLCC
+    :param c: For the MLCC
+    :param a1: For the first bit shift
+    :param a2: For the second bit shift
+    :param a3: For the third bit shift
+    :param a4: For the MWC
     :return:
     """
 
@@ -85,14 +81,15 @@ first_thousand = []
 first_thousand_x_1 = [0.0]
 # 1b first one
 for i in range(1000):
+    # This is x_i+1
     first_thousand.append(next(rand_gen))
     if i > 0:
+        # This is x_i
         first_thousand_x_1.append(first_thousand[i - 1])
 
 # Now plot xi+1 vs xi
 
 plt.scatter(first_thousand, first_thousand_x_1)
-# plt.scatter([i for i in range(1000)], first_thousand_x_1)
 plt.xlabel("$X_i$")
 plt.ylabel("$X_{i+1}$")
 plt.show()
@@ -110,89 +107,6 @@ End of Part 1
 
 """
 
-
-def part_two(a, b, c, n=100, rand_generator=rand_gen):
-    """
-    Integrate density profile
-
-    x = r/r_vir so th radius relative to the virial radius
-
-    0 to x_max = 5 gives average total number of satellites
-
-
-    n(x) = A<N_sat>(x/b)^(a-3) ep(-(x/b)^c)
-
-    Solve lll_V n(r) dV = <N_sat>
-    The 3D spherical integral from 0 to 5
-
-
-    :param a:
-    :param b:
-    :param c:
-    :param n:
-    :return:
-    """
-
-    def interpolation_aspect():
-        """
-        This performs the interpolation part of 2 b)
-        :return:
-        """
-        r_val = [1E-4, 1E-2, 1E-1, 1, 5]
-        integral_vals = [sat_equation_no_A(r) for r in r_val]
-
-    def derivative_dn_dx(b):
-        """
-        Returns the numerical derivative of the equation at x = b
-        Returns the analytical result as well
-        :param b:
-        :return:
-        """
-
-        raise NotImplementedError
-
-    def generate_satallite_positions(number_of_satallites):
-        """
-        Generates random positions that follow the profile of equation 2
-
-        To sample the distribution, rejection sampling is used. The reason for this is the ease of implementing it
-        for this problem, since only have to check if the random sample is less than the p(x) given in the handin
-
-        In rejetion sampling, you accept the x value if the y value for that x is less than or equal to p(x)
-
-        p(x) in this case is n(x)*4*pi*x^2 dx / N_sat = (4*pi*A*b^3*(x/b)^a*exp(-(x/b)^c)*(a-c*(x/b)^c-1)/(x^2))
-        The N_sat cancels with the one in the n(x)
-
-        :param number_of_satallites: Number of satallites to generate
-        :return:
-        """
-
-        def p_x(x):
-            """
-            Since only using 100 satallites for each, this is the way to go
-            :param x:
-            :return:
-            """
-            return three_d_integral(x, A, num_sats=100)
-
-        # Now generate random x values, plug into sat equation to get a value, and see if its less than p_x
-        sat_radius = []
-        sat_input = []
-        sat_theta = []
-        sat_omega = []
-
-        # Need min and max values for the rejection y sample
-        min_y_value = min(
-            [sat_equation(i, A, num_satallites=number_of_satallites) / number_of_satallites for i in r_val])
-
-        while len(sat_radius) < number_of_satallites:
-            input_x = next(rand_gen) * 5
-            random_radius = sat_equation(input_x, A=A, num_satallites=number_of_satallites) / number_of_satallites
-            if random_radius <= p_x(random_radius):
-                sat_radius.append(random_radius)
-                sat_input.append(input_x)
-
-
 """
 
 
@@ -206,14 +120,17 @@ a = 1.4 * next(rand_gen) + 1.1
 b = 1.5 * next(rand_gen) + 0.5
 c = 2.5 * next(rand_gen) + 1.5
 
+print("The value for a is: {}".format(a))
+print("The value for b is: {}".format(b))
+print("The value for c is: {}".format(c))
+
 
 def sat_equation(r, A, num_satallites=100):
     return A * num_satallites * (r / b) ** (a - 3) * np.exp(-(r / b) ** c)
 
-    # Since we are integrating the sat_equation in 3D spherical integral, but only a dependence on r, integral
-    # corresponds to sat_equation times dV, or the derivative of the volume of the sphere, so 4 * pi * r^2
 
-
+# Since we are integrating the sat_equation in 3D spherical integral, but only a dependence on r, integral
+# corresponds to sat_equation times dV, or the derivative of the volume of the sphere, so 4 * pi * r^2
 def three_d_integral(r, A, num_sats):
     volume_of_sphere = 4 * np.pi * r ** 2
     return volume_of_sphere * sat_equation(r, A, num_sats)
@@ -245,7 +162,7 @@ def integration_alg(func, lower_bound, upper_bound, number_of_steps):
 
     # lower bound is 0, if there is a radius of 0, then no satallites in it
     integration_value = 0
-    step_size = (upper_bound - lower_bound) / number_of_steps
+    step_size = (upper_bound - lower_bound) / number_of_steps  # The number of steps to take
     for i in range(number_of_steps):
         if i != 0:
             # Current step can be just i*step_size but only if integral always starts at 0
@@ -263,10 +180,9 @@ def integration_alg(func, lower_bound, upper_bound, number_of_steps):
 
     return integration_value
 
-    # To get A, realize that <N_sat> is on both sides, so equation becomes
-    # A * integral = 1, so A = 1 / integral, to do it then need different equation than in sat_equation
 
-
+# To get A, realize that <N_sat> is on both sides, so equation becomes
+# A * integral = 1, so A = 1 / integral, to do it then need different equation than in sat_equation
 A = 1 / integration_alg(sat_equation_no_A, lower_bound=0, upper_bound=5, number_of_steps=10000)
 print("A: ", A)
 
@@ -276,7 +192,6 @@ measured_values = [np.log10(sat_equation(r, A)) for r in interp_data_points]
 
 
 # Now need to interpolate between the points
-
 def lu_factor(A):
     """
         LU factorization with partial pivoting
@@ -287,61 +202,62 @@ def lu_factor(A):
             Where piv is 1d numpy array with row swap indices
     """
     n = A.shape[0]
-    piv = np.arange(0,n)
-    for k in range(n-1):
+    piv = np.arange(0, n)
+    for k in range(n - 1):
 
         # piv
-        max_row_index = np.argmax(abs(A[k:n,k])) + k
-        piv[[k,max_row_index]] = piv[[max_row_index,k]]
-        A[[k,max_row_index]] = A[[max_row_index,k]]
+        max_row_index = np.argmax(abs(A[k:n, k])) + k
+        piv[[k, max_row_index]] = piv[[max_row_index, k]]
+        A[[k, max_row_index]] = A[[max_row_index, k]]
 
         # LU
-        for i in range(k+1,n):
-            A[i,k] = A[i,k]/A[k,k]
-            for j in range(k+1,n):
-                A[i,j] -= A[i,k]*A[k,j]
+        for i in range(k + 1, n):
+            A[i, k] = A[i, k] / A[k, k]
+            for j in range(k + 1, n):
+                A[i, j] -= A[i, k] * A[k, j]
 
-    return [A,piv]
+    return [A, piv]
 
 
-def ufsub(L,b):
+def ufsub(L, b):
     """ Unit row oriented forward substitution """
     for i in range(L.shape[0]):
         for j in range(i):
-            b[i] -= L[i,j]*b[j]
+            b[i] -= L[i, j] * b[j]
     return b
 
 
-def bsub(U,y):
+def bsub(U, y):
     """ Row oriented backward substitution """
-    for i in range(U.shape[0]-1,-1,-1):
-        for j in range(i+1, U.shape[1]):
-            y[i] -= U[i,j]*y[j]
-        y[i] = y[i]/U[i,i]
+    for i in range(U.shape[0] - 1, -1, -1):
+        for j in range(i + 1, U.shape[1]):
+            y[i] -= U[i, j] * y[j]
+        y[i] = y[i] / U[i, i]
     return y
+
 
 def bisect(arr, value):
     """
     Finds the index in the array closest to value
-    :param arr:
-    :param value:
+    :param arr: The array of values
+    :param value: The value to insert/the interpolation value
     :return: Index of insertion point for the value in a sorted array
     """
 
     low = 0
     high = len(arr)
     while low < high:
-        mid = (low+high)//2
+        mid = int((low + high) / 2)  # Get the midpoint to test if the value is above or below it
         if value < arr[mid]:
             high = mid
         else:
-            low = mid+1
-
+            low = mid + 1
     return low
+
 
 def one_d_cube_spline(x, y):
     """
-    This method was chosen because in the slides it acheived fairly good fits hile being simpler than the Akima spline
+    This method was chosen because in the slides it achieved fairly good fits while being simpler than the Akima spline
 
     Natural because at i= and i = N-1, setting y'' = 0
 
@@ -357,34 +273,34 @@ def one_d_cube_spline(x, y):
     second deriv 2*(b-2a+(a-b)*3t)/(x2-x1)^2)
 
     t(x) = x - x1/x2 - x1
-    a =
     :return:
     """
     len_x = len(x)
 
-    h = [x[i+1]-x[i] for i in range(len_x-1)]
+    h = [x[i + 1] - x[i] for i in range(len_x - 1)]
 
-    A = np.zeros((len_x,len_x))
-    A[0,0] = 1.
+    A = np.zeros((len_x, len_x))
+    A[0, 0] = 1.
 
-    for i in range(len_x-1):
+    for i in range(len_x - 1):
         if i != (len_x - 2):
-            A[i+1,i+1] = 2*(h[i] + h[i+1]) # Going down the diagonal, do the 2*(differences)
-        A[i+1, i] = h[i]
-        A[i, i+1] = h[i] # The left and right sode of this one, which is the upper and lower edges
+            A[i + 1, i + 1] = 2 * (h[i] + h[i + 1])  # Going down the diagonal, do the 2*(differences)
+        A[i + 1, i] = h[i]
+        A[i, i + 1] = h[i]  # The left and right sode of this one, which is the upper and lower edges
 
-    A[0,1] = 0.0 # so natural cubic spline
+    A[0, 1] = 0.0  # so natural cubic spline
     A[len_x - 1, len_x - 2] = 0.0
-    A[len_x - 1, len_x - 1] = 1.0 # Cubic spline end, should be 0?
+    A[len_x - 1, len_x - 1] = 1.0  # Cubic spline end, should be 0?
 
-    B = np.zeros(len_x) # RHS of equation
+    B = np.zeros(len_x)  # RHS of equation
     for i in range(len_x - 2):
-        B[i + 1] = 3*(y[i+2] - y[i+1]) / h[i+1] - 3*(y[i+1] - y[i])/h[i]
+        # This is the
+        B[i + 1] = 3 * (y[i + 2] - y[i + 1]) / h[i + 1] - 3 * (y[i + 1] - y[i]) / h[i]
 
-    LU, piv = lu_factor(A)
-    B = B[piv]
-    ytmp = ufsub(LU, B)
-    c = bsub(LU, ytmp)
+    LU, piv = lu_factor(A) # Get the LU decomposition and pivot indicies
+    B = B[piv] # reorder B to match the pivots
+    ytmp = ufsub(LU, B) # Do forward substitution to get y for y = ax
+    c = bsub(LU, ytmp) # Do backward substitution to get x from x = LU*y
 
     # Now can calculate B and D
     d = []
@@ -395,7 +311,7 @@ def one_d_cube_spline(x, y):
              (c[i + 1] + 2.0 * c[i]) / 3.0
         b.append(tb)
 
-    xs=np.arange(0, 5, 0.0001)
+    xs = np.arange(0, 5, 0.0001)
     interpolated_points = []
     for point in xs:
         point = np.log10(point)
@@ -406,20 +322,24 @@ def one_d_cube_spline(x, y):
         elif point > x[-1]:
             interpolated_points.append(None)
             continue
-        i = bisect(x, point) - 1
-        dx = point - x[i]
+        i = bisect(x, point) - 1 # Find the closest point through determining where the input falls in the array
+        dx = point - x[i] # Difference between the measured point and the interpolation point
         interpolated_points.append(y[i] + b[i] * dx + c[i] * dx ** 2 + d[i] * dx ** 3)
+        # Uses the coefficients to create y + b*x + c*x^2 + d*x^3 = x
 
-    plt.plot(xs, interpolated_points)
-    plt.scatter(interp_data_points, measured_values, s=10)
-    #plt.xscale("log")
-    #plt.yscale("log")
+    plt.plot(xs, interpolated_points, c='r', label='Interpolated Values')
+    plt.scatter(interp_data_points, measured_values, s=10, label='Measured Values')
+    plt.legend(loc='best')
+    plt.xlabel("X (R/(Virial Radius)")
+    plt.ylabel("Number of Satellites")
+    plt.title("")
     plt.show()
     plt.cla()
 
     return y, b, c, d
 
-def estimate_with_spline(xs,y,b,c,d):
+
+def estimate_with_spline(xs, y, b, c, d):
     interpolated_points = []
     for point in xs:
         point = np.log10(point)
@@ -436,19 +356,21 @@ def estimate_with_spline(xs,y,b,c,d):
 
     return xs, interpolated_points
 
+
 x = [1e-4, 1e-2, 1e-1, 1, 5]
 A = 1 / integration_alg(sat_equation_no_A, lower_bound=0, upper_bound=5, number_of_steps=10000)
 y = [np.log10(sat_equation(r, A)) for r in x]
 
-y,b_interp,c_interp,d_interp = one_d_cube_spline(np.log10(x), y)
-xs, interpolated_points = estimate_with_spline(xs=np.arange(0, 5, 0.0001),y=y, b=b_interp,c=c_interp,d=d_interp)
+y, b_interp, c_interp, d_interp = one_d_cube_spline(np.log10(x), y)
+xs, interpolated_points = estimate_with_spline(xs=np.arange(0, 5, 0.0001), y=y, b=b_interp, c=c_interp, d=d_interp)
 
 plt.plot(xs, interpolated_points)
 plt.scatter(interp_data_points, measured_values, s=10)
-#plt.xscale("log")
-#plt.yscale("log")
+# plt.xscale("log")
+# plt.yscale("log")
 plt.show()
 plt.cla()
+
 
 # Now onto Part c, numerical differentiation
 
@@ -486,7 +408,7 @@ def derivative(func, b, step_size=0.1, iterations=5):
     def A_deriv(n, m):
         if n == 1:
             result = (func(b + step_size / 2 ** (m - 1)) - func(b - step_size / (2 ** (m - 1)))) / (
-                        2 * step_size / (2 ** (m - 1)))
+                    2 * step_size / (2 ** (m - 1)))
         else:
             result = (4 ** (n - 1) * A_deriv(n - 1, m + 1) - A_deriv(n - 1, m)) / (4 ** (n - 1) - 1)
         return result
@@ -512,6 +434,17 @@ print("Analytic: {}\n Numerical: {}\n Difference: {}\n".format(np.round(analytic
 
 def random_sample(func, xmin, xmax, ymin, ymax, num_samples):
     """
+
+            Generates random positions that follow the profile of equation 2
+
+        To sample the distribution, rejection sampling is used. The reason for this is the ease of implementing it
+        for this problem, since only have to check if the random sample is less than the p(x) given in the handin
+
+        In rejetion sampling, you accept the x value if the y value for that x is less than or equal to p(x)
+
+        p(x) in this case is n(x)*4*pi*x^2 dx / N_sat = (4*pi*A*b^3*(x/b)^a*exp(-(x/b)^c)*(a-c*(x/b)^c-1)/(x^2))
+        The N_sat cancels with the one in the n(x)
+
     This random sampling uses the rejection method, primarily because its the easiest to implement
 
     For this project, since x can be between 0 and 5, y is also between 0 and 5
@@ -612,7 +545,7 @@ def calc_avg_satallites_per_bin(bin_values, bins, num_haloes):
     for index, element in enumerate(bin_values):
         avg_per_halo = element / num_haloes  # Divide by number of haloes to get average per halo
         avg_per_bin_width = avg_per_halo / (
-                    bins[index + 1] - bins[index])  # Divide by bin width to normalize for bin width
+                bins[index + 1] - bins[index])  # Divide by bin width to normalize for bin width
         new_averages.append(avg_per_bin_width)
 
     return np.asarray(new_averages)
@@ -779,20 +712,20 @@ print("84th Percentile: {}".format(nums_in_bins[int(0.84 * len(nums_in_bins))]))
 
 poisson_values = []
 start_poisson = nums_in_bins[-1]
-for value in np.arange(0, start_poisson+10):
+for value in np.arange(0, start_poisson + 10):
     poisson_values.append(poisson(sum(nums_in_bins) / len(nums_in_bins), value))
 print("Poisson: {}".format(poisson_values))
 
-#print(max(np.asarray(nums_in_bins)/sum(nums_in_bins)))
-#print(min(np.asarray(nums_in_bins)/sum(nums_in_bins)))
-#nums_in_bins = np.asarray(nums_in_bins)/sum(nums_in_bins)
-bins = np.arange(min(nums_in_bins), max(nums_in_bins)+1, 1)
+# print(max(np.asarray(nums_in_bins)/sum(nums_in_bins)))
+# print(min(np.asarray(nums_in_bins)/sum(nums_in_bins)))
+# nums_in_bins = np.asarray(nums_in_bins)/sum(nums_in_bins)
+bins = np.arange(min(nums_in_bins), max(nums_in_bins) + 1, 1)
 bin_values, _, _ = plt.hist(nums_in_bins, bins=bins)
 plt.cla()
-plt.xlim(min(nums_in_bins)-1, max(nums_in_bins)+1)
+plt.xlim(min(nums_in_bins) - 1, max(nums_in_bins) + 1)
 bin_values = bin_values / sum(bin_values)
 plt.hist(np.arange(min(nums_in_bins), max(nums_in_bins), 1), bins=bins, weights=bin_values)
-plt.plot(np.arange(0, start_poisson+10), poisson_values, 'r')
+plt.plot(np.arange(0, start_poisson + 10), poisson_values, 'r')
 plt.show()
 
 """
@@ -866,7 +799,7 @@ for i, a in enumerate(a_range):
                                                     upper_bound=5,
                                                     number_of_steps=10000,
                                                     a=a, b=b, c=c)
-            indicies.append((i,j,k))
+            indicies.append((i, j, k))
 
 print(A_values.flatten().shape)
 
@@ -877,17 +810,19 @@ print(A_values.flatten().shape)
 
 # Have to do it N times, where N is the number of AxB for C values, so huge
 # Unless take the closest 8 points
-subcube = A_values[int(len(a_range)/2-2):int(len(a_range)/2+2),int(len(b_range)/2-2):int(len(b_range)/2+2),int(len(b_range)/2-2):int(len(b_range)/2+2)]
+subcube = A_values[int(len(a_range) / 2 - 2):int(len(a_range) / 2 + 2),
+          int(len(b_range) / 2 - 2):int(len(b_range) / 2 + 2), int(len(b_range) / 2 - 2):int(len(b_range) / 2 + 2)]
 
 print(subcube.shape)
 print(subcube.flatten().shape)
 print(subcube)
 
+
 # So now try interpolating points based off the 64 points around it, allows for
 # 3D interpolation = 3 1D interpolations
 # Or 3D linear interpolations
 
-def interpolator_3d(a,b,c, cube, size_subcube=2):
+def interpolator_3d(a, b, c, cube, size_subcube=2):
     """
 
     Interpolator that interpolates in 3D when given a data cube and an x,y,z point in a,b,c range
@@ -901,31 +836,30 @@ def interpolator_3d(a,b,c, cube, size_subcube=2):
     c_range = np.linspace(1.5, 4.1, cube.shape[2])
 
     # Find the value, using bisect in each dimension
-    a_loc = bisect(a_range, a) -1
-    b_loc = bisect(b_range, b) -1
-    c_loc = bisect(c_range, c) -1
+    a_loc = bisect(a_range, a) - 1
+    b_loc = bisect(b_range, b) - 1
+    c_loc = bisect(c_range, c) - 1
 
     # now gather the subcube around it
     # First need to add another layer outside the cube for edge cases. Because we assume its a straight line outside the
     # spline, we can just copy all the values out one more
     # Makes sure that there is no index out of bounds for this
     cube = np.pad(cube, pad_width=size_subcube, mode="edge")
-    subcube = cube[a_loc - size_subcube:a_loc+size_subcube,b_loc-size_subcube:b_loc+size_subcube,c_loc-size_subcube:c_loc+size_subcube]
+    subcube = cube[a_loc - size_subcube:a_loc + size_subcube, b_loc - size_subcube:b_loc + size_subcube,
+              c_loc - size_subcube:c_loc + size_subcube]
 
     # Now onto the actual spline interpolation in 3D
     # TODO Add 3D spline interpolation based on the subcube
     # Because there is a spline for each single-width vector in the cube, the number of splines goes up as
     # N^2, because, for example, adding a single more a column in the interpolation means that b*c more splines must be
     # generated
-    #(1) Per-formMspline interpolations to get a vector of valuesy.x1i;x2/,iD0;:::;M1.
+    # (1) Per-formMspline interpolations to get a vector of valuesy.x1i;x2/,iD0;:::;M1.
     # (2)  Construct  a  one-dimensional  spline  through those  values.
     # (3)  Finally,  spline-interpolate to the desired valuey.x1;x2/
 
     # So plan is to do M splines through c_range first, to get a 2D array of y(ai,bi,c)
     # Then N splines through b space to get 1D array of y(ai,b,c)
     # Finally, 1D spline through ai to get the final value of y(a,b,c) = A
-
-
 
 
 """
@@ -954,9 +888,6 @@ with open("satgals_m12.txt", "r") as mass_haloes:
             except:
                 print("No Radius, but not #")
                 print(line)
-
-
-
 
 """
 
