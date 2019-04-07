@@ -395,6 +395,28 @@ def one_d_cube_spline(x, y):
              (c[i + 1] + 2.0 * c[i]) / 3.0
         b.append(tb)
 
+    xs=np.arange(0, 5, 0.0001)
+    interpolated_points = []
+    for point in xs:
+        point = np.log10(point)
+        # Get closest point first
+        if point < x[0]:
+            interpolated_points.append(None)
+            continue
+        elif point > x[-1]:
+            interpolated_points.append(None)
+            continue
+        i = bisect(x, point) - 1
+        dx = point - x[i]
+        interpolated_points.append(y[i] + b[i] * dx + c[i] * dx ** 2 + d[i] * dx ** 3)
+
+    plt.plot(xs, interpolated_points)
+    plt.scatter(interp_data_points, measured_values, s=10)
+    #plt.xscale("log")
+    #plt.yscale("log")
+    plt.show()
+    plt.cla()
+
     return y, b, c, d
 
 def estimate_with_spline(xs,y,b,c,d):
@@ -423,8 +445,8 @@ xs, interpolated_points = estimate_with_spline(xs=np.arange(0, 5, 0.0001),y=y, b
 
 plt.plot(xs, interpolated_points)
 plt.scatter(interp_data_points, measured_values, s=10)
-plt.xscale("log")
-plt.yscale("log")
+#plt.xscale("log")
+#plt.yscale("log")
 plt.show()
 plt.cla()
 
@@ -756,19 +778,21 @@ print("16th Percentile: {}".format(nums_in_bins[int(0.16 * len(nums_in_bins))]))
 print("84th Percentile: {}".format(nums_in_bins[int(0.84 * len(nums_in_bins))]))
 
 poisson_values = []
-start_poisson = nums_in_bins[0]
-for value in np.arange(start_poisson, 33):
-    poisson_values.append(poisson(sum(nums_in_bins) / len(nums_in_bins), 0))
+start_poisson = nums_in_bins[-1]
+for value in np.arange(0, start_poisson+10):
+    poisson_values.append(poisson(sum(nums_in_bins) / len(nums_in_bins), value))
 print("Poisson: {}".format(poisson_values))
 
 #print(max(np.asarray(nums_in_bins)/sum(nums_in_bins)))
 #print(min(np.asarray(nums_in_bins)/sum(nums_in_bins)))
 #nums_in_bins = np.asarray(nums_in_bins)/sum(nums_in_bins)
-bin_values, _, _ = plt.hist(nums_in_bins, bins=1000)
+bins = np.arange(min(nums_in_bins), max(nums_in_bins)+1, 1)
+bin_values, _, _ = plt.hist(nums_in_bins, bins=bins)
 plt.cla()
+plt.xlim(min(nums_in_bins)-1, max(nums_in_bins)+1)
 bin_values = bin_values / sum(bin_values)
-plt.hist(np.linspace(min(nums_in_bins), max(nums_in_bins), 1000), bins=1000, weights=bin_values)
-plt.plot(np.arange(start_poisson, 33), poisson_values, 'r')
+plt.hist(np.arange(min(nums_in_bins), max(nums_in_bins), 1), bins=bins, weights=bin_values)
+plt.plot(np.arange(0, start_poisson+10), poisson_values, 'r')
 plt.show()
 
 """
@@ -899,7 +923,7 @@ def interpolator_3d(a,b,c, cube, size_subcube=2):
 
     # So plan is to do M splines through c_range first, to get a 2D array of y(ai,bi,c)
     # Then N splines through b space to get 1D array of y(ai,b,c)
-    # Finally, 1D spline through ai to get the final value of y(a,b,c)
+    # Finally, 1D spline through ai to get the final value of y(a,b,c) = A
 
 
 
