@@ -19,15 +19,11 @@ def two_f(A, a, b, c):
 
     def root_finder(bracket=[1e-8, 5], epsilon=0.001, max_iter=500, root_to_find=1 / 2):
         """
-        Find the roots, easiest method to do is the bisection method, so deciding on that one
-
         First bracket the root, and see where the function changes sign -> that is the root
 
-        Gaurunteed to work (according to the slides), unlike secant method or some of the other ones
+        Guaranteed to work (according to the slides), unlike secant method or others
 
-        N(x) = y/2 => y = 2*N(x)
-
-        Essentially finding two roots, need to bracket on one side with bracket of [0,Nmax], other with [Nmax,5]
+        We are finding two roots, need to bracket on one side with bracket of [0,Nmax], other with [Nmax,5]
 
         Uses root_to_find by subtracting that value from the rest of the stuff, so that the root wanted is at 0
 
@@ -53,10 +49,11 @@ def two_f(A, a, b, c):
         return (bracket[0] + bracket[1]) / 2.
 
     Nmax = n(np.arange(1e-4, 5, 0.001))
-    max_index = list(Nmax).index(max(Nmax))
+    max_index = list(Nmax).index(max(Nmax)) # TODO Check this iis alright
     max_val = np.arange(1e-4, 5, 0.001)[max_index]
 
     # There are two roots in this problem, as half the max happens on either side of the max
+    # Starts at 1e-8 because of problems with divide by 0 otherwise
     lower_root = root_finder(bracket=[1e-8, max_val], root_to_find=n(max_val) / 2.)
     upper_root = root_finder(bracket=[max_val, 5], root_to_find=n(max_val) / 2.)
     print("Roots = {}, {}".format(lower_root, upper_root))

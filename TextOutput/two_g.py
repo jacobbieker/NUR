@@ -3,8 +3,6 @@ import matplotlib.pyplot as plt
 
 
 def two_g(haloes, bin_values, log_bins, poisson):
-    import sys
-    sys.stdout = open('2g.txt', 'w')
     # Get the radial bin with the largest number of galaxies
     index_of_radial_bin_max = list(bin_values).index(max(bin_values))
     inner_radius = log_bins[index_of_radial_bin_max]
@@ -26,7 +24,7 @@ def two_g(haloes, bin_values, log_bins, poisson):
             mid_point = int(len(arr) / 2.)
             lower_half = arr[:mid_point]
             upper_half = arr[mid_point:]
-            merge_sort(lower_half)
+            merge_sort(lower_half) # Recursively call until list is 1 element long
             merge_sort(upper_half)
 
             # This only occurs after arr is split into all 1 element arrays
@@ -59,9 +57,9 @@ def two_g(haloes, bin_values, log_bins, poisson):
     # Then only select ones that fall within that range between the two
     for index, elements in enumerate(haloes):
         radiii, _, _ = elements
-        haloes[index][0] = merge_sort(radiii)
+        haloes[index][0] = merge_sort(radiii) # Sort for easier time getting the elements
 
-    selected_satallites = []
+    selected_satellites = []
 
     for radiii, _, _ in haloes:
         # Now they are sorted, only select the ones inbetween the radial values
@@ -77,31 +75,31 @@ def two_g(haloes, bin_values, log_bins, poisson):
             if element < outer_radius and end_index < 0:
                 end_index = index + 1  # Need to add one since slice does not include the last element specified
                 break
-        selected_satallites.append(radiii[start_index:end_index])
+        selected_satellites.append(radiii[start_index:end_index])
 
-    selected_satallites = np.asarray(selected_satallites)
+    selected_satellites = np.asarray(selected_satellites)
 
-    nums_in_bins = [len(sat) for sat in selected_satallites]
-    nums_in_bins = merge_sort(nums_in_bins)
-
-    print("Median Value: {}".format(nums_in_bins[int(len(nums_in_bins) / 2)]))
-    print("16th Percentile: {}".format(nums_in_bins[int(0.16 * len(nums_in_bins))]))
-    print("84th Percentile: {}".format(nums_in_bins[int(0.84 * len(nums_in_bins))]))
+    nums_in_bins = [len(sat) for sat in selected_satellites]
+    nums_in_bins = merge_sort(nums_in_bins) # Sort so that median, and quartile are easy to calculate
+    import sys
+    sys.stdout = open('2g.txt', 'w')
+    # From the slides
+    print("Median Value: {}".format(nums_in_bins[int(len(nums_in_bins) / 2)]), flush=True)
+    print("16th Percentile: {}".format(nums_in_bins[int(0.16 * len(nums_in_bins))]), flush=True)
+    print("84th Percentile: {}".format(nums_in_bins[int(0.84 * len(nums_in_bins))]), flush=True)
 
     poisson_values = []
     start_poisson = nums_in_bins[-1]
+    # Go from 0 to past the end to have the plot show a smooth function the whole plot
     for value in np.arange(0, start_poisson + 10):
         poisson_values.append(poisson(sum(nums_in_bins) / len(nums_in_bins), value))
 
-    # print(max(np.asarray(nums_in_bins)/sum(nums_in_bins)))
-    # print(min(np.asarray(nums_in_bins)/sum(nums_in_bins)))
-    # nums_in_bins = np.asarray(nums_in_bins)/sum(nums_in_bins)
-    bins = np.arange(min(nums_in_bins), max(nums_in_bins) + 1, 1)
+    bins = np.arange(nums_in_bins[0], nums_in_bins[-1] + 1, 1)
     bin_values, _, _ = plt.hist(nums_in_bins, bins=bins)
     plt.cla()
-    plt.xlim(min(nums_in_bins) - 1, max(nums_in_bins) + 1)
+    plt.xlim(nums_in_bins[0] - 1, nums_in_bins[-1] + 1)
     bin_values = bin_values / sum(bin_values)
-    plt.hist(np.arange(min(nums_in_bins), max(nums_in_bins), 1), bins=bins, weights=bin_values,
+    plt.hist(np.arange(nums_in_bins[0], nums_in_bins[-1], 1), bins=bins, weights=bin_values,
              label='Number of galaxies in bin')
     plt.plot(np.arange(0, start_poisson + 10), poisson_values, 'r', label='Poisson Distribution')
     plt.legend(loc='best')

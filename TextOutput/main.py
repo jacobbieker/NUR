@@ -16,7 +16,7 @@ sys.stdout = open('seed.txt', 'w')
 
 seed = 5227
 
-print("The Seed for this project is: {}".format(seed))
+print("The seed for this project is: {}".format(seed))
 
 rand_gen = random_generator(seed)
 

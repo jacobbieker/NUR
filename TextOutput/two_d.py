@@ -17,22 +17,13 @@ def two_d(rand_gen, A, a, b, c):
 
     def random_sample(func, xmin, xmax, ymin, ymax, num_samples):
         """
+        Generates random positions that follow the profile of equation 2
 
-                Generates random positions that follow the profile of equation 2
+        To sample the distribution, rejection sampling is used. The reason for this is the ease of implementing it
+        for this problem, since only have to check if the random sample is less than the p(x) given in the handin
 
-            To sample the distribution, rejection sampling is used. The reason for this is the ease of implementing it
-            for this problem, since only have to check if the random sample is less than the p(x) given in the handin
-
-            In rejetion sampling, you accept the x value if the y value for that x is less than or equal to p(x)
-
-            p(x) in this case is n(x)*4*pi*x^2 dx / N_sat = (4*pi*A*b^3*(x/b)^a*exp(-(x/b)^c)*(a-c*(x/b)^c-1)/(x^2))
-            The N_sat cancels with the one in the n(x)
-
-        This random sampling uses the rejection method, primarily because its the easiest to implement
-
-        For this project, since x can be between 0 and 5, y is also between 0 and 5
-
-        Generate random numbers in both, if y < p_x(x) then the data point is accepted
+        p(x) in this case is n(x)*4*pi*x^2 dx / N_sat = (4*pi*A*b^3*(x/b)^a*exp(-(x/b)^c)*(a-c*(x/b)^c-1)/(x^2))
+        The N_sat cancels with the one in the n(x)
 
         :return:
         """
@@ -40,10 +31,10 @@ def two_d(rand_gen, A, a, b, c):
         inputs = []
         outputs = []
 
-        while len(outputs) < num_samples:
-            x = next(rand_gen) * (xmax - xmin) + xmin
-            y = next(rand_gen) * (ymax - ymin) + ymin
-            if y <= func(x, A, 1):
+        while len(outputs) < num_samples: # While the number of accepted values is less than the number of required samples
+            x = next(rand_gen) * (xmax - xmin) + xmin # Generate random number for X
+            y = next(rand_gen) * (ymax - ymin) + ymin # Generate random for Y as well
+            if y <= func(x, A, 1): # The check for if y <= p(x), if not, its rejected, else, accepted
                 inputs.append(x)
                 outputs.append(y)
 
@@ -51,7 +42,7 @@ def two_d(rand_gen, A, a, b, c):
 
     rand_sample_x, rand_sample_y = random_sample(three_d_integral, 1e-8, 5, 1e-8, 5, 10000)
     plt.scatter(rand_sample_x, rand_sample_y, s=1, label='Sampled Points')
-    plt.plot(np.arange(0, 5, 0.001), [three_d_integral(i, A, 1) for i in np.arange(0, 5, 0.001)], 'r', label='p(x)')
+    plt.plot(np.arange(1e-8, 5, 0.001), [three_d_integral(i, A, 1) for i in np.arange(1e-8, 5, 0.001)], 'r', label='p(x)')
     plt.legend(loc='best')
     plt.title("Random Sampling")
     plt.xlabel("X (R/R_vir)")
@@ -63,19 +54,18 @@ def two_d(rand_gen, A, a, b, c):
 
     def create_halo(number_of_satallites):
         rand_sample_x = random_sample(three_d_integral, 0, 5, 0, 5, number_of_satallites)[0]
-
-        # now randomize the phi and thetas
+        # Now randomize the phi and thetas
         phi_sample = []
         theta_sample = []
 
         for _ in rand_sample_x:
-            phi_sample.append((2 * np.pi * next(rand_gen)))
-            theta_sample.append(np.pi * next(rand_gen))
+            phi_sample.append((2 * np.pi * next(rand_gen))) # Since phi can be between 0 and 2pi radians
+            theta_sample.append(np.pi * next(rand_gen)) # Since theta can be between 0 and pi radians
 
         return rand_sample_x, phi_sample, theta_sample
 
     # Now outputting them
-    print("(R, $\phi$, $\\theta$)")
+    print("(r, $\phi$, $\\theta$)")
     x, phi, theta = create_halo(100)
     for r, p, t in zip(x, phi, theta):
-        print("{}, {}, {}".format(r, p, t))
+        print("({}, {}, {})".format(r, p, t))

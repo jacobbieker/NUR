@@ -176,7 +176,7 @@ def two_b(A,a,b,c):
                  (c[i + 1] + 2.0 * c[i]) / 3.0
             b.append(tb)
 
-        xs = np.arange(0, 5, 0.0001)
+        xs = np.arange(1e-8, 5, 0.0001)
         interpolated_points = []
         for point in xs:
             point = np.log10(point)
