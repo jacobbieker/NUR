@@ -76,5 +76,6 @@ def two_d(rand_gen, A, a, b, c):
 
     # Now outputting them
     print("(R, $\phi$, $\\theta$)")
-    for r, p, t in create_halo(100):
+    x, phi, theta = create_halo(100)
+    for r, p, t in zip(x, phi, theta):
         print("{}, {}, {}".format(r, p, t))

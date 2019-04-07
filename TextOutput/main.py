@@ -1,14 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from .one_a import poisson
-from .one_b import random_generator, one_b
-from .two_a import two_a
-from .two_b import two_b
-from .two_c import two_c
-from .two_d import two_d
-from .two_e import two_e
-from .two_f import two_f
-from .two_g import two_g
+from one_a import poisson
+from one_b import random_generator, one_b
+from two_a import two_a
+from two_b import two_b
+from two_c import two_c
+from two_d import two_d
+from two_e import two_e
+from two_f import two_f
+from two_g import two_g
 
 import sys
 sys.stdout = open('seed.txt', 'w')

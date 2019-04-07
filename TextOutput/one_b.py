@@ -42,6 +42,7 @@ def random_generator(seed, m=2 ** 64 - 1, a=2349543, c=913842, a1=21, a2=35, a3=
 
         yield close_to_final
 
+
 def one_b(rand_gen):
     first_thousand = []
     first_thousand_x_1 = [0.0]
@@ -67,5 +68,7 @@ def one_b(rand_gen):
         first_million.append(next(rand_gen))
 
     plt.hist(first_million, bins=np.linspace(0.0, 1.0, 20))
+    plt.xlabel("Generated Number")
+    plt.ylabel("Number of Elements")
     plt.savefig("./plots/1000000_rand.png", dpi=300)
     plt.cla()
