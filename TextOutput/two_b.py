@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def two_b(A,a,b,c):
+def two_b(A, a, b, c):
     def sat_equation_no_A(r):
         """
         This is for finding A, only need the radius then
@@ -11,7 +11,6 @@ def two_b(A,a,b,c):
         """
         volume_of_sphere = 4 * np.pi * r ** 2
         return volume_of_sphere * ((r / b) ** (a - 3) * np.exp(-(r / b) ** c))
-
 
     def integration_alg(func, lower_bound, upper_bound, number_of_steps):
         """
@@ -50,56 +49,88 @@ def two_b(A,a,b,c):
     def sat_equation(r, A, num_satallites=100):
         return A * num_satallites * (r / b) ** (a - 3) * np.exp(-(r / b) ** c)
 
-
     interp_data_points = [1e-4, 1e-2, 1e-1, 1, 5]
-
     measured_values = [np.log10(sat_equation(r, A)) for r in interp_data_points]
 
-
     # Now need to interpolate between the points
-    def lu_factor(A):
+    def lu_decomposition(A):
         """
-            LU factorization with partial pivoting
+            LU Decomposition with partial pivoting
 
-            Overwrite A with:
-                U (upper triangular) and (unit Lower triangular) L
-            Return [LU,piv]
-                Where piv is 1d numpy array with row swap indices
+            Overwrites A array with an upper triangular matrix for U and a lower triangular matrix for L
+
+            returns the overwritten A as well as the indicies for B for the pivots
+
+            LU Decomposition is chosen because it needs to be calculated only once and then can be used
+            as A*x=b <=> LU*x=b as much as needed
+
+            Based off the algorithm 21.1 in Trefethen and Bau Numerical Linear Algebra
+
         """
-        n = A.shape[0]
-        piv = np.arange(0, n)
-        for k in range(n - 1):
+        m = len(A)
+        piv = np.arange(0, m)
+        for k in range(m - 1):
+            # For each column in A
 
             # piv
-            max_row_index = np.argmax(abs(A[k:n, k])) + k
+            # Get the maximum value in that column
+            max_row_index = np.argmax(abs(A[k:m, k])) + k  # Add k to correct for where we start
+            # Select i >= k to max |uik|
+
+            # Set the pivot index for that column and the index
             piv[[k, max_row_index]] = piv[[max_row_index, k]]
+            # Interchange two rows uk,k:m <=>ui,k:m
+            # lk,1:k-1 <=> li,1:k-1
+            # Reorders A so that the first non-zero element in each column is the max of that column
+            # Does the pivot on A
             A[[k, max_row_index]] = A[[max_row_index, k]]
+            # This permutes the rows
 
             # LU
-            for i in range(k + 1, n):
-                A[i, k] = A[i, k] / A[k, k]
-                for j in range(k + 1, n):
-                    A[i, j] -= A[i, k] * A[k, j]
+            # For all the columns from the current one to the last one
+            for j in range(k + 1, m):
+                # Divide the value by the max value of the row, which is on the diagnoal, from the original pivoting
+                # The Gaussian Elimination part of the algorithm
+                A[j, k] /= A[k, k]
+                A[j, k + 1:m] = A[j, k + 1:m] - A[j, k] * A[k, k + 1:m]
 
         return [A, piv]
 
+    def forward_substitution(L, b):
+        """
+        Solves the lower-triangular system of Lx = b
 
-    def ufsub(L, b):
-        """ Unit row oriented forward substitution """
-        for i in range(L.shape[0]):
+        Does this by solving for the first row to get x_1
+        then substituting that forward into the next row to get x_2, etc.
+        :param L:
+        :param b:
+        :return:
+        """
+        for i in range(len(L)):
             for j in range(i):
+                # Subtract from the upper triangular matrix
+                # For the first element, this solves for x_1
                 b[i] -= L[i, j] * b[j]
         return b
 
+    def back_substitution(U, b):
+        """
+        Solves the upper-triangular system of Ux = b
+        Opposite of forward sub, this solves for x_n
+        then substitutes that in to solve x_n-1, down to x_1
 
-    def bsub(U, y):
-        """ Row oriented backward substitution """
-        for i in range(U.shape[0] - 1, -1, -1):
-            for j in range(i + 1, U.shape[1]):
-                y[i] -= U[i, j] * y[j]
-            y[i] = y[i] / U[i, i]
-        return y
-
+        :param U:
+        :param b:
+        :return:
+        """
+        for i in reversed(list(range(0, len(U)))):
+            # Goes from the last element to the first one
+            # Solve for the current row, starting with x_n
+            x_soln = U[i, i+1:len(U[0])] * b[i+1:len(U[0])]
+            for soln in x_soln:
+                b[i] -= soln
+            b[i] /= U[i, i] # Divide by the diagonal
+        return b
 
     def bisect(arr, value):
         """
@@ -119,7 +150,6 @@ def two_b(A,a,b,c):
                 low = mid + 1
         return low
 
-
     def one_d_cube_spline(x, y):
         """
         This method was chosen because in the slides it achieved fairly good fits while being simpler than the Akima spline
@@ -137,58 +167,54 @@ def two_b(A,a,b,c):
 
         second deriv 2*(b-2a+(a-b)*3t)/(x2-x1)^2)
 
-        t(x) = x - x1/x2 - x1
         :return:
         """
         len_x = len(x)
 
-        h = [x[i + 1] - x[i] for i in range(len_x - 1)]
+        h = [x[i + 1] - x[i] for i in range(len_x - 1)]  # Get the xi_1 - x_i
 
         A = np.zeros((len_x, len_x))
-        A[0, 0] = 1.
 
+        # Fill in A
         for i in range(len_x - 1):
             if i != (len_x - 2):
                 A[i + 1, i + 1] = 2 * (h[i] + h[i + 1])  # Going down the diagonal, do the 2*(differences)
             A[i + 1, i] = h[i]
-            A[i, i + 1] = h[i]  # The left and right sode of this one, which is the upper and lower edges
+            A[i, i + 1] = h[i]  # Makes A a tridiagonal matrix
+        A[-1,-1] = h[-1]
+        A[0,0] = h[0]
 
-        A[0, 1] = 0.0  # so natural cubic spline
-        A[len_x - 1, len_x - 2] = 0.0
-        A[len_x - 1, len_x - 1] = 1.0  # Cubic spline end, should be 0?
-
-        B = np.zeros(len_x)  # RHS of equation
+        B = np.zeros(len_x)
         for i in range(len_x - 2):
-            # This is the
-            B[i + 1] = 3 * (y[i + 2] - y[i + 1]) / h[i + 1] - 3 * (y[i + 1] - y[i]) / h[i]
+            # This is the RHS of the equation 2nd derivatives  of A
+            B[i + 1] = (y[i + 2] - y[i + 1]) / h[i + 1] - (y[i + 1] - y[i]) / h[i]
 
-        LU, piv = lu_factor(A) # Get the LU decomposition and pivot indicies
-        B = B[piv] # reorder B to match the pivots
-        ytmp = ufsub(LU, B) # Do forward substitution to get y for y = ax
-        c = bsub(LU, ytmp) # Do backward substitution to get x from x = LU*y
+        LU, piv = lu_decomposition(A)  # Get the LU decomposition and pivot indicies
+        B = B[piv]  # reorder B to match the pivots
+        x_vals = forward_substitution(LU, B)  # Do forward substitution to get y for y = ax
+        c = back_substitution(LU, x_vals)  # Do backward substitution to get x from x = LU*y
 
         # Now can calculate B and D
         d = []
         b = []
         for i in range(len_x - 1):
-            d.append((c[i + 1] - c[i]) / (3.0 * h[i]))
-            tb = (y[i + 1] - y[i]) / h[i] - h[i] * \
-                 (c[i + 1] + 2.0 * c[i]) / 3.0
-            b.append(tb)
+            d.append((c[i + 1] - c[i]) / (3.0 * h[i])) # Deriv of C  # (xi+1 - xi)/(3*(xi+1 - xi)) with prev xi
+            b.append((y[i + 1] - y[i]) / h[i] - h[i]*(c[i + 1] + 2.0 * c[i]) / 3.0) # Deriv of D (yi+1-yi)/(xi+1-xi) - (xi+1-xi) * (xi+1+2*xi)/3.
+            # So the derivative at that points
 
         xs = np.arange(1e-8, 5, 0.0001)
         interpolated_points = []
         for point in xs:
             point = np.log10(point)
             # Get closest point first
-            if point < x[0]:
+            if point < x[0]:  # If outside the range, nothing is returned
                 interpolated_points.append(None)
                 continue
-            elif point > x[-1]:
+            elif point > x[-1]:  # If larger than the range, then interpolation not valid
                 interpolated_points.append(None)
                 continue
-            i = bisect(x, point) - 1 # Find the closest point through determining where the input falls in the array
-            dx = point - x[i] # Difference between the measured point and the interpolation point
+            i = bisect(x, point) - 1  # Find the closest point through determining where the input falls in the array
+            dx = point - x[i]  # Difference between the measured point and the interpolation point
             interpolated_points.append(y[i] + b[i] * dx + c[i] * dx ** 2 + d[i] * dx ** 3)
             # Uses the coefficients to create y + b*x + c*x^2 + d*x^3 = x
 

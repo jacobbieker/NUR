@@ -67,7 +67,7 @@ def one_b(rand_gen):
     for i in range(1000000):
         first_million.append(next(rand_gen))
 
-    plt.hist(first_million, bins=np.linspace(0.0, 1.0, 20))
+    plt.hist(first_million, bins=np.linspace(0.0, 1.0, 21))
     plt.xlabel("Generated Number")
     plt.ylabel("Number of Elements")
     plt.savefig("./plots/1000000_rand.png", dpi=300)

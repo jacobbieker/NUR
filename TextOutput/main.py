@@ -9,6 +9,7 @@ from two_d import two_d
 from two_e import two_e
 from two_f import two_f
 from two_g import two_g
+from two_h import two_h
 
 import sys
 sys.stdout = open('seed.txt', 'w')
@@ -35,4 +36,6 @@ haloes, bin_values, log_bins = two_e(rand_gen, A, a, b, c)
 two_f(A, a, b, c)
 
 two_g(haloes, bin_values, log_bins, poisson)
+
+two_h()
 

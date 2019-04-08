@@ -2,6 +2,8 @@ import numpy as np
 
 
 def two_h():
+    import sys
+    sys.stdout = open('2h.txt', 'w')
     def sat_equation_A_cube(r, a, b, c):
         """
         This is for finding A, only need the radius then
@@ -46,44 +48,6 @@ def two_h():
 
         return integration_value
 
-        # To get A, realize that <N_sat> is on both sides, so equation becomes
-        # A * integral = 1, so A = 1 / integral, to do it then need different equation than in sat_equation
-
-
-    # First need to create the 3D cube of values
-    b_range = np.arange(0.5, 2.1, 0.1)
-    a_range = np.arange(1.1, 2.6, 0.1)
-    c_range = np.arange(1.5, 4.1, 0.1)
-
-    A_values = np.zeros((len(a_range), len(b_range), len(c_range)))
-    indicies = []
-    # now fill in the 6240 values in the 3D cube of values
-    for i, a in enumerate(a_range):
-        for j, b in enumerate(b_range):
-            for k, c in enumerate(c_range):
-                A_values[i, j, k] = 1 / integration_alg(sat_equation_A_cube,
-                                                        lower_bound=0,
-                                                        upper_bound=5,
-                                                        number_of_steps=10000,
-                                                        a=a, b=b, c=c)
-                indicies.append((i, j, k))
-
-    # TODO Save to file and load as it takes awhile to generate
-
-    # Now have the 3D cube of values, need to write an interpolator for them
-    # Can  take the 1D interpolator and apply it to here
-
-    # Have to do it N times, where N is the number of AxB for C values, so huge
-    # Unless take the closest 8 points
-    subcube = A_values[int(len(a_range) / 2 - 2):int(len(a_range) / 2 + 2),
-              int(len(b_range) / 2 - 2):int(len(b_range) / 2 + 2), int(len(b_range) / 2 - 2):int(len(b_range) / 2 + 2)]
-
-
-    # So now try interpolating points based off the 64 points around it, allows for
-    # 3D interpolation = 3 1D interpolations
-    # Or 3D linear interpolations
-
-
     def bisect(arr, value):
         """
         Finds the index in the array closest to value
@@ -102,10 +66,38 @@ def two_h():
                 low = mid + 1
         return low
 
+    def trilinear_interp(corners, a, b, c):
+        """
+        Actual trilinear interpolation of the points
+
+        Alg taken from:
+
+        http://paulbourke.net/miscellaneous/interpolation/
+
+        :param corners: The corners of the box, in a 3D cube
+        :param a:
+        :param b:
+        :param c:
+        :return:
+        """
+
+        value_at_abc = corners[0,0,0]*(1-a)*(1-b)*(1-c) + \
+        corners[1,0,0]*a*(1-b)*(1-c) + \
+        corners[0,1,0]*b*(1-a)*(1-c) + \
+            corners[0,0,1]*c*(1-a)*(1-b) + \
+            corners[1,0,1]*a*(1-b)*c + \
+            corners[0,1,1]*(1-a)*b*c +\
+            corners[1,1,0]*(a*b*(1-c)) + \
+            corners[1,1,1]*a*b*c
+
+        return value_at_abc
+
     def interpolator_3d(a, b, c, cube, size_subcube=2):
         """
 
         Interpolator that interpolates in 3D when given a data cube and an x,y,z point in a,b,c range
+
+        Uses trilinear interpolation, as that is faster and easier than creating splines
 
         :param cube:
         :return:
@@ -125,18 +117,59 @@ def two_h():
         # spline, we can just copy all the values out one more
         # Makes sure that there is no index out of bounds for this
         cube = np.pad(cube, pad_width=size_subcube, mode="edge")
-        subcube = cube[a_loc - size_subcube:a_loc + size_subcube, b_loc - size_subcube:b_loc + size_subcube,
-                  c_loc - size_subcube:c_loc + size_subcube]
+        subcube = cube[a_loc:a_loc + size_subcube, b_loc:b_loc + size_subcube,
+                  c_loc:c_loc + size_subcube]
+        #subcube = cube[a_loc - size_subcube:a_loc, b_loc - size_subcube:b_loc,
+        #          c_loc- size_subcube:c_loc]
 
-        # Now onto the actual spline interpolation in 3D
-        # TODO Add 3D spline interpolation based on the subcube
-        # Because there is a spline for each single-width vector in the cube, the number of splines goes up as
-        # N^2, because, for example, adding a single more a column in the interpolation means that b*c more splines must be
-        # generated
-        # (1) Per-formMspline interpolations to get a vector of valuesy.x1i;x2/,iD0;:::;M1.
-        # (2)  Construct  a  one-dimensional  spline  through those  values.
-        # (3)  Finally,  spline-interpolate to the desired valuey.x1;x2/
+        print(subcube.shape, flush=True)
 
-        # So plan is to do M splines through c_range first, to get a 2D array of y(ai,bi,c)
-        # Then N splines through b space to get 1D array of y(ai,b,c)
-        # Finally, 1D spline through ai to get the final value of y(a,b,c) = A
+        # Since regularly spaced, no need for scaling of sides, all by 0.1
+        # So only need to make it a unit cube at the "origin"
+        value = trilinear_interp(subcube, a, b, c)
+
+        return value
+
+    def test_interpolator(a, b, c):
+        """
+        Performs a basic test of the 3D interpolator
+        :param a:
+        :param b:
+        :param c:
+        :return:
+        """
+
+        actual_A = 1 / integration_alg(sat_equation_A_cube,
+                                       lower_bound=0,
+                                       upper_bound=5,
+                                       number_of_steps=1000,
+                                       a=a, b=b, c=c)
+
+        # First need to create the 3D cube of values
+        b_range = np.arange(0.5, 2.1, 0.1)
+        a_range = np.arange(1.1, 2.6, 0.1)
+        c_range = np.arange(1.5, 4.1, 0.1)
+
+        A_values = np.zeros((len(a_range), len(b_range), len(c_range)))
+        indicies = []
+        # now fill in the 6240 values in the 3D cube of values
+        for i, a in enumerate(a_range):
+            for j, b in enumerate(b_range):
+                for k, c in enumerate(c_range):
+                    A_values[i, j, k] = 1 / integration_alg(sat_equation_A_cube,
+                                                            lower_bound=0,
+                                                            upper_bound=5,
+                                                            number_of_steps=1000,
+                                                            a=a, b=b, c=c)
+                    indicies.append((i, j, k))
+
+        interp_value = interpolator_3d(a, b, c, A_values)
+        print("Actual A: {}\n Interpolated Value: {}\n Difference: {}\n".format(np.round(actual_A, 12),
+                                                                       np.round(interp_value, 12),
+                                                                       np.round(actual_A, 12) - np.round(
+                                                                           interp_value, 12)), flush=True)
+
+    test_interpolator(1.34, 0.98, 3.074)
+
+
+

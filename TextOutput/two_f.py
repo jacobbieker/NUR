@@ -49,7 +49,7 @@ def two_f(A, a, b, c):
         return (bracket[0] + bracket[1]) / 2.
 
     Nmax = n(np.arange(1e-4, 5, 0.001))
-    max_index = list(Nmax).index(max(Nmax)) # TODO Check this iis alright
+    max_index = list(Nmax).index(max(Nmax)) # TODO Check this is alright
     max_val = np.arange(1e-4, 5, 0.001)[max_index]
 
     # There are two roots in this problem, as half the max happens on either side of the max

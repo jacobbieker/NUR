@@ -8,7 +8,6 @@ def two_c(A, a, b, c):
     def sat_equation(r, A, num_satallites=100):
         return A * num_satallites * (r / b) ** (a - 3) * np.exp(-(r / b) ** c)
 
-
     # Since we are integrating the sat_equation in 3D spherical integral, but only a dependence on r, integral
     # corresponds to sat_equation times dV, or the derivative of the volume of the sphere, so 4 * pi * r^2
     def three_d_integral(r, A, num_sats):
@@ -17,7 +16,6 @@ def two_c(A, a, b, c):
 
     def n(x):
         return three_d_integral(x, A, 1)
-
 
     def analytic_derivative(b):
         """
@@ -28,7 +26,6 @@ def two_c(A, a, b, c):
         """
         x = b
         return (4 * np.pi * A * b ** 3 * (x / b) ** a * np.exp(-(x / b) ** c) * (a - c * (x / b) ** c - 1) / (x ** 2))
-
 
     def derivative(func, b, step_size=0.1, iterations=5):
         """
@@ -63,7 +60,6 @@ def two_c(A, a, b, c):
                 best_approx = deriv
 
         return deriv
-
 
     print("Analytic: {}\n Numerical: {}\n Difference: {}\n".format(np.round(analytic_derivative(b), 12),
                                                                    np.round(derivative(n, b), 12),
