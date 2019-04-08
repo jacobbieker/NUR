@@ -215,8 +215,9 @@ def two_b(A, a, b, c):
             dx = point - x[i]  # Difference between the measured point and the interpolation point
             interpolated_points.append(y[i] + b[i] * dx + c[i] * dx ** 2 + d[i] * dx ** 3)
             # Uses the coefficients to create y + b*x + c*x^2 + d*x^3 = x
-
-        plt.plot(xs, interpolated_points, c='r', label='Interpolated Values')
+        x_lin, y_lin = linear_interp(x,y)
+        plt.plot(xs, interpolated_points, c='r', label='Spline Interpolated Values')
+        plt.plot(x_lin, y_lin, c='b', label='Linear Interpolated Values', linestyle='dashed')
         plt.scatter(interp_data_points, measured_values, s=10, label='Measured Values')
         plt.legend(loc='best')
         plt.xscale("log")
@@ -227,8 +228,40 @@ def two_b(A, a, b, c):
 
         return y, b, c, d
 
+    def linear_interp(x,y):
+        """
+        Do a linear interpolation as well, for checking it
+
+        equation is: y0(x1-x) + y1(x-x0) / (x1-x0)
+
+        Should be done in log space for this, but can do it in both to show
+
+        :param x:
+        :param y:
+        :return:
+        """
+
+        xs = np.arange(1e-8, 5, 0.0001)
+        interpolated_points = []
+        for point in xs:
+            point = np.log10(point) # Have to do it in log space for it to work
+            # Get closest point first
+            if point < x[0]:  # If outside the range, nothing is returned
+                interpolated_points.append(None)
+                continue
+            elif point > x[-1]:  # If larger than the range, then interpolation not valid
+                interpolated_points.append(None)
+                continue
+            i = bisect(x, point) - 1  # Find the closest point through determining where the input falls in the array
+
+            # Now the linear interpolation
+            interpolated_points.append((y[i]*(x[i+1]-point) + y[i+1]*(point - x[i])) / (x[i+1] - x[i]))
+
+        return xs, interpolated_points
+
     x = [1e-4, 1e-2, 1e-1, 1, 5]
     A = 1 / integration_alg(sat_equation_no_A, lower_bound=0, upper_bound=5, number_of_steps=10000)
     y = [np.log10(sat_equation(r, A)) for r in x]
 
     y, b_interp, c_interp, d_interp = one_d_cube_spline(np.log10(x), y)
+    linear_interp(np.log10(x), y)
