@@ -140,7 +140,7 @@ def two_h(a, b, c):
         actual_A = 1 / integration_alg(sat_equation_A_cube,
                                        lower_bound=0,
                                        upper_bound=5,
-                                       number_of_steps=10000,
+                                       number_of_steps=1000,
                                        a=a, b=b, c=c)
 
         # First need to create the 3D cube of values

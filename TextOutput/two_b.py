@@ -198,8 +198,8 @@ def two_b(A, a, b, c):
         d = []
         b = []
         for i in range(len_x - 1):
-            d.append((c[i + 1] - c[i]) / (3.0 * h[i])) # Deriv of C  # (xi+1 - xi)/(3*(xi+1 - xi)) with prev xi
-            b.append((y[i + 1] - y[i]) / h[i] - h[i]*(c[i + 1] + 2.0 * c[i]) / 3.0) # Deriv of D (yi+1-yi)/(xi+1-xi) - (xi+1-xi) * (xi+1+2*xi)/3.
+            d.append((c[i + 1] - c[i]) / (3.0 * h[i])) # (xi+1 - xi)/(3*(xi+1 - xi)) with prev xi
+            b.append((y[i + 1] - y[i]) / h[i] - h[i]*(c[i + 1] + 2.0 * c[i]) / 3.0) # (yi+1-yi)/(xi+1-xi) - (xi+1-xi) * (xi+1+2*xi)/3.
             # So the derivative at that points
 
         xs = np.arange(1e-8, 5, 0.0001)
