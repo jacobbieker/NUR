@@ -202,6 +202,9 @@ def two_b(A, a, b, c):
 
         xs = np.arange(1e-8, 5, 0.0001)
         interpolated_points = []
+        A_val = 1 / integration_alg(sat_equation_no_A, lower_bound=0, upper_bound=5, number_of_steps=10000)
+        xb = np.arange(1e-4, 5, 0.0001)
+        actual_points = [np.log10(sat_equation(r, A_val)) for r in xb]
         for point in xs:
             point = np.log10(point) # Have to do it in log space for it to work
             # Get closest point first
@@ -216,6 +219,7 @@ def two_b(A, a, b, c):
             interpolated_points.append(y[i] + b[i] * dx + c[i] * dx ** 2 + d[i] * dx ** 3)
             # Uses the coefficients to create y + b*x + c*x^2 + d*x^3 = x
         x_lin, y_lin = linear_interp(x,y)
+        plt.plot(xb, actual_points, c='g', label='Actual Values', linestyle='-.')
         plt.plot(xs, interpolated_points, c='r', label='Spline Interpolated Values')
         plt.plot(x_lin, y_lin, c='b', label='Linear Interpolated Values', linestyle='dashed')
         plt.scatter(interp_data_points, measured_values, s=10, label='Measured Values')
