@@ -86,7 +86,6 @@ def two_b(A, a, b, c):
             A[[k, max_row_index]] = A[[max_row_index, k]]
             # This permutes the rows
 
-            # LU
             # For all the columns from the current one to the last one
             for j in range(k + 1, m):
                 # Divide the value by the max value of the row, which is on the diagnoal, from the original pivoting
@@ -181,12 +180,12 @@ def two_b(A, a, b, c):
                 A[i + 1, i + 1] = 2 * (h[i] + h[i + 1])  # Going down the diagonal, do the 2*(differences)
             A[i + 1, i] = h[i]
             A[i, i + 1] = h[i]  # Makes A a tridiagonal matrix
-        A[-1,-1] = h[-1]
+        A[-1,-1] = h[-1] # Add in the corners missed above
         A[0,0] = h[0]
 
         B = np.zeros(len_x)
         for i in range(len_x - 2):
-            # This is the RHS of the equation 2nd derivatives  of A
+            # This is the RHS of the equation of A,
             B[i + 1] = (y[i + 2] - y[i + 1]) / h[i + 1] - (y[i + 1] - y[i]) / h[i]
 
         LU, piv = lu_decomposition(A)  # Get the LU decomposition and pivot indicies
@@ -204,7 +203,7 @@ def two_b(A, a, b, c):
         xs = np.arange(1e-8, 5, 0.0001)
         interpolated_points = []
         for point in xs:
-            point = np.log10(point)
+            point = np.log10(point) # Have to do it in log space for it to work
             # Get closest point first
             if point < x[0]:  # If outside the range, nothing is returned
                 interpolated_points.append(None)

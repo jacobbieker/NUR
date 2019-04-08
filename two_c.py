@@ -20,8 +20,6 @@ def two_c(A, a, b, c):
     def analytic_derivative(b):
         """
         Computed on Wolfram Alpha, this is the actual derivative with respeict to dx
-
-        Since at x =b ,
         :return:
         """
         x = b
@@ -31,16 +29,10 @@ def two_c(A, a, b, c):
         """
         This uses the central differences method to calculate the derivative of a function
 
-        The step size was chosen to minimize the error between the numerical and analytical results, smaller step size resulted
-        in a larger error, as well as a larger step size
-
         Ridder method: keep decreasing step_size until error grows
 
         A(1,m) = f(x+h/2^m-1) - f(x-h/2^m-1)/(2h/s^m-1)
         A(n,m) = 4^n-1*A(n-1,m+1) - A(n-1,m)/(4^n-1)-1)
-
-        :param b:
-        :return:
         """
 
         def A_deriv(n, m):

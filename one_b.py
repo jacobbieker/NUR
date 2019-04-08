@@ -30,8 +30,7 @@ def random_generator(seed, m=2 ** 64 - 1, a=2349543, c=913842, a1=21, a2=35, a3=
         # Now MWC part
         mwc_out = a4 * (generated_number & (2 ** 32 - 1)) + (generated_number >> 32)
 
-        seed = mwc_out
-        # m = third_output
+        seed = mwc_out # set the seed to a new number, so a different number generated next time
         mwc_out = mwc_out / m
 
         if mwc_out > 1.:

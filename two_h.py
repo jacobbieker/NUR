@@ -113,8 +113,8 @@ def two_h(a, b, c):
         c_loc = bisect(c_range, c) - 1
 
         # now gather the subcube around it
-        # First need to add another layer outside the cube for edge cases. Because we assume its a straight line outside the
-        # spline, we can just copy all the values out one more
+        # First need to add another layer outside the cube for edge cases. Because we are using linear,
+        # we can just copy all the values out one more
         # Makes sure that there is no index out of bounds for this
         cube = np.pad(cube, pad_width=size_subcube, mode="edge")
         subcube = cube[a_loc:a_loc + 2, b_loc:b_loc + 2,
