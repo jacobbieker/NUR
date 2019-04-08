@@ -82,12 +82,12 @@ def two_h():
         """
 
         value_at_abc = corners[0,0,0]*(1-a)*(1-b)*(1-c) + \
-        corners[1,0,0]*a*(1-b)*(1-c) + \
-        corners[0,1,0]*b*(1-a)*(1-c) + \
+            corners[1,0,0]*a*(1-b)*(1-c) + \
+            corners[0,1,0]*b*(1-a)*(1-c) + \
             corners[0,0,1]*c*(1-a)*(1-b) + \
             corners[1,0,1]*a*(1-b)*c + \
             corners[0,1,1]*(1-a)*b*c +\
-            corners[1,1,0]*(a*b*(1-c)) + \
+            corners[1,1,0]*a*b*(1-c) + \
             corners[1,1,1]*a*b*c
 
         return value_at_abc
@@ -159,7 +159,7 @@ def two_h():
                     A_values[i, j, k] = 1 / integration_alg(sat_equation_A_cube,
                                                             lower_bound=0,
                                                             upper_bound=5,
-                                                            number_of_steps=1000,
+                                                            number_of_steps=10000,
                                                             a=a, b=b, c=c)
                     indicies.append((i, j, k))
 
@@ -169,7 +169,7 @@ def two_h():
                                                                        np.round(actual_A, 12) - np.round(
                                                                            interp_value, 12)), flush=True)
 
-    test_interpolator(1.34, 0.98, 3.074)
+    test_interpolator(1.6100971712616463, 1.8215513551807954, 1.8015316267403434)
 
 
 
