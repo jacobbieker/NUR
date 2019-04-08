@@ -37,5 +37,5 @@ two_f(A, a, b, c)
 
 two_g(haloes, bin_values, log_bins, poisson)
 
-two_h()
+two_h(a, b, c)
 

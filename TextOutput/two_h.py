@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def two_h():
+def two_h(a, b, c):
     import sys
     sys.stdout = open('2h.txt', 'w')
     def sat_equation_A_cube(r, a, b, c):
@@ -81,14 +81,14 @@ def two_h():
         :return:
         """
 
-        value_at_abc = corners[0,0,0]*(1-a)*(1-b)*(1-c) + \
-            corners[1,0,0]*a*(1-b)*(1-c) + \
-            corners[0,1,0]*b*(1-a)*(1-c) + \
-            corners[0,0,1]*c*(1-a)*(1-b) + \
-            corners[1,0,1]*a*(1-b)*c + \
-            corners[0,1,1]*(1-a)*b*c +\
-            corners[1,1,0]*a*b*(1-c) + \
-            corners[1,1,1]*a*b*c
+        value_at_abc =  corners[0,0,0]*(1-a)*(1-b)*(1-c) + \
+                        corners[1,0,0]*a*(1-b)*(1-c) + \
+                        corners[0,1,0]*b*(1-a)*(1-c) + \
+                        corners[0,0,1]*c*(1-a)*(1-b) + \
+                        corners[1,0,1]*a*(1-b)*c + \
+                        corners[0,1,1]*(1-a)*b*c +\
+                        corners[1,1,0]*a*b*(1-c) + \
+                        corners[1,1,1]*a*b*c
 
         return value_at_abc
 
@@ -117,12 +117,10 @@ def two_h():
         # spline, we can just copy all the values out one more
         # Makes sure that there is no index out of bounds for this
         cube = np.pad(cube, pad_width=size_subcube, mode="edge")
-        subcube = cube[a_loc:a_loc + size_subcube, b_loc:b_loc + size_subcube,
-                  c_loc:c_loc + size_subcube]
-        #subcube = cube[a_loc - size_subcube:a_loc, b_loc - size_subcube:b_loc,
-        #          c_loc- size_subcube:c_loc]
+        subcube = cube[a_loc:a_loc + 2, b_loc:b_loc + 2,
+                  c_loc:c_loc + 2]
 
-        print(subcube.shape, flush=True)
+        print(subcube.shape)
 
         # Since regularly spaced, no need for scaling of sides, all by 0.1
         # So only need to make it a unit cube at the "origin"
@@ -142,7 +140,7 @@ def two_h():
         actual_A = 1 / integration_alg(sat_equation_A_cube,
                                        lower_bound=0,
                                        upper_bound=5,
-                                       number_of_steps=1000,
+                                       number_of_steps=10000,
                                        a=a, b=b, c=c)
 
         # First need to create the 3D cube of values
@@ -159,7 +157,7 @@ def two_h():
                     A_values[i, j, k] = 1 / integration_alg(sat_equation_A_cube,
                                                             lower_bound=0,
                                                             upper_bound=5,
-                                                            number_of_steps=10000,
+                                                            number_of_steps=1000,
                                                             a=a, b=b, c=c)
                     indicies.append((i, j, k))
 
@@ -169,7 +167,7 @@ def two_h():
                                                                        np.round(actual_A, 12) - np.round(
                                                                            interp_value, 12)), flush=True)
 
-    test_interpolator(1.6100971712616463, 1.8215513551807954, 1.8015316267403434)
+    test_interpolator(a, b, c)
 
 
 

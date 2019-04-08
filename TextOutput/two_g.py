@@ -30,26 +30,26 @@ def two_g(haloes, bin_values, log_bins, poisson):
             # This only occurs after arr is split into all 1 element arrays
             # Starts with 2 subarrays of 1, building up to the whole list
 
-            i = 0
-            j = 0
-            k = 0
-            while i < len(lower_half) and j < len(upper_half):
-                if lower_half[i] < upper_half[j]:
-                    arr[k] = lower_half[i]
-                    i += 1
+            lower_index = 0
+            upper_index = 0
+            array_index = 0
+            while lower_index < len(lower_half) and upper_index < len(upper_half):
+                if lower_half[lower_index] < upper_half[upper_index]:
+                    arr[array_index] = lower_half[lower_index]
+                    lower_index += 1
                 else:
-                    arr[k] = upper_half[j]
-                    j += 1
-                k += 1
+                    arr[array_index] = upper_half[upper_index]
+                    upper_index += 1
+                array_index += 1
 
             # Now if N is not even, then either the lower or upper half will have extra elements
             # so need to add those, already in order, elements
-            for l in range(i, len(lower_half)):
-                arr[k] = lower_half[l]
-                k += 1
-            for l in range(j, len(upper_half)):
-                arr[k] = upper_half[l]
-                k += 1
+            for i in range(lower_index, len(lower_half)):
+                arr[array_index] = lower_half[i]
+                array_index += 1
+            for i in range(upper_index, len(upper_half)):
+                arr[array_index] = upper_half[i]
+                array_index += 1
 
             # Now arr is sorted, return it
             return arr
