@@ -1,5 +1,3 @@
-import numpy as np
-import matplotlib.pyplot as plt
 from one_a import poisson
 from one_b import random_generator, one_b
 from two_a import two_a

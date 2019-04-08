@@ -222,7 +222,6 @@ def two_b(A, a, b, c):
         plt.scatter(interp_data_points, measured_values, s=10, label='Measured Values')
         plt.legend(loc='best')
         plt.xscale("log")
-        plt.yscale("log")
         plt.xlabel("Log(X (R/(Virial Radius))")
         plt.ylabel("Log(Number of Satellites)")
         plt.savefig("./plots/interpolation.png", dpi=300)
