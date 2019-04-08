@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo "Seed is 5227"
+
 echo "Run handin template"
 
 echo "Creating the plotting directory if it does not exist"
