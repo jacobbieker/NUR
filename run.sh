@@ -16,9 +16,9 @@ python3 main.py
 
 echo "Generating the pdf"
 
-pdflatex template.tex
-bibtex template.aux
-pdflatex template.tex
-pdflatex template.tex
+pdflatex handin_jacobbieker.tex
+bibtex handin_jacobbieker.aux
+pdflatex handin_jacobbieker.tex
+pdflatex handin_jacobbieker.tex
 
 
